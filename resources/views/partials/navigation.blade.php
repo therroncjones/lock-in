@@ -24,7 +24,7 @@
                 <x-app-icon :name="$link['icon']" class="size-5 shrink-0" />
                 <span class="min-w-0 flex-1">{{ $link['label'] }}</span>
                 @if ($missingOneRepMaxCount > 0 && $link['route'] === 'one-rep-max')
-                    <span class="ml-auto grid size-5 shrink-0 place-items-center rounded-full text-[11px] font-bold text-white" style="background-color: #e23b3b; line-height: 1" data-one-rep-max-alert="{{ $missingOneRepMaxCount }}" aria-label="{{ $missingOneRepMaxCount }} {{ $missingOneRepMaxCount === 1 ? 'one rep max' : 'one rep maxes' }} to add">{{ $missingOneRepMaxCount }}</span>
+                    <span class="ml-auto grid shrink-0 place-items-center rounded-full text-[11px] font-bold text-white" style="background-color: #e23b3b; width: 1.25rem; height: 1.25rem; line-height: 1" data-one-rep-max-alert="{{ $missingOneRepMaxCount }}" aria-label="{{ $missingOneRepMaxCount }} {{ $missingOneRepMaxCount === 1 ? 'one rep max' : 'one rep maxes' }} to add">{{ $missingOneRepMaxCount }}</span>
                 @endif
             </a>
         @endforeach
@@ -45,7 +45,7 @@
                 <span class="relative inline-flex">
                     <x-app-icon :name="$link['icon']" class="size-6" />
                     @if ($missingOneRepMaxCount > 0 && $link['route'] === 'one-rep-max')
-                        <span class="absolute grid size-4 place-items-center rounded-full font-bold text-white" style="background-color: #e23b3b; top: -6px; right: -8px; font-size: 10px; line-height: 1" data-one-rep-max-alert="{{ $missingOneRepMaxCount }}" aria-label="{{ $missingOneRepMaxCount }} {{ $missingOneRepMaxCount === 1 ? 'one rep max' : 'one rep maxes' }} to add">{{ $missingOneRepMaxCount }}</span>
+                        <span class="absolute grid place-items-center rounded-full font-bold text-white" style="background-color: #e23b3b; top: -6px; right: -8px; width: 1rem; height: 1rem; font-size: 10px; line-height: 1; z-index: 1" data-one-rep-max-alert="{{ $missingOneRepMaxCount }}" aria-label="{{ $missingOneRepMaxCount }} {{ $missingOneRepMaxCount === 1 ? 'one rep max' : 'one rep maxes' }} to add">{{ $missingOneRepMaxCount }}</span>
                     @endif
                 </span>
                 {{ $link['label'] }}

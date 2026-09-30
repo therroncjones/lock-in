@@ -4,6 +4,7 @@ namespace App\Livewire;
 
 use App\Models\Exercise;
 use App\Models\OneRepMax as OneRepMaxRecord;
+use App\Support\CoreLifts;
 use App\Support\PlateMath;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -472,6 +473,8 @@ class OneRepMax extends Component
      */
     private function exercises(): Collection
     {
+        CoreLifts::ensure();
+
         $exercises = Exercise::query()
             ->availableTo(auth()->user())
             ->whereNull('user_id')

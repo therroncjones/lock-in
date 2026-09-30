@@ -5,6 +5,7 @@ namespace App\Support;
 use App\Models\Exercise;
 use App\Models\OneRepMax;
 use App\Models\User;
+use Database\Seeders\ExerciseSeeder;
 use Illuminate\Support\Collection;
 
 class CoreLifts
@@ -26,6 +27,31 @@ class CoreLifts
         'Barbell Back Squat' => 'squat',
         'Conventional Deadlift' => 'deadlift',
     ];
+
+    /**
+     * @var array<string, string>
+     */
+    private const Groups = [
+        'Barbell Back Squat' => 'Lower Body',
+        'Bench Press' => 'Upper Body',
+        'Conventional Deadlift' => 'Lower Body',
+    ];
+
+    public static function ensure(): void
+    {
+        foreach (self::Names as $name) {
+            $group = self::Groups[$name];
+
+            Exercise::query()->firstOrCreate(
+                ['user_id' => null, 'name' => $name],
+                [
+                    'group' => $group,
+                    'session_types' => ExerciseSeeder::typesFor($name, $group),
+                    'approved_at' => now(),
+                ],
+            );
+        }
+    }
 
     public static function missingCount(User $user): int
     {
@@ -58,6 +84,8 @@ class CoreLifts
      */
     private static function missing(User $user): Collection
     {
+        self::ensure();
+
         $exercises = Exercise::query()
             ->whereNull('user_id')
             ->whereIn('name', array_keys(self::Labels))
@@ -68,6 +96,7 @@ class CoreLifts
         $recorded = OneRepMax::query()
             ->whereBelongsTo($user)
             ->whereIn('exercise_id', $exercises->pluck('id'))
+            ->where('weight', '>', 0)
             ->pluck('exercise_id')
             ->unique();
 

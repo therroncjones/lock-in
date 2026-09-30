@@ -1,4 +1,11 @@
 <div class="flex w-full flex-col gap-4 px-4 py-5 md:px-8 md:py-8">
+    <style>
+        @media (width >= 48rem) {
+            .workout-type-box {
+                border-radius: 9999px;
+            }
+        }
+    </style>
     <header class="flex items-start justify-between gap-4">
         <div>
             <h1 class="text-2xl font-bold tracking-tight">Progress</h1>
@@ -15,7 +22,7 @@
     </header>
 
     <div class="flex flex-wrap items-center gap-3 rounded-2xl bg-white p-3 shadow-sm ring-1 ring-neutral-200/70">
-            <div class="flex flex-wrap gap-1 rounded-full bg-neutral-100 p-1">
+            <div class="workout-type-box flex flex-wrap gap-1 rounded-3xl bg-neutral-100 p-1">
                 @foreach ($types as $option)
                     <button
                         type="button"

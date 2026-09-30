@@ -50,7 +50,12 @@
                                             <x-app-icon name="dumbbell" class="size-5" />
                                         </span>
                                         <div class="min-w-0">
-                                            <h2 class="text-base font-semibold">{{ $exercise->name }}</h2>
+                                            <h2 class="text-base font-semibold">
+                                                {{ $exercise->name }}
+                                                @if (! $assessments[$exercise->id]['weight'])
+                                                    <span class="ml-2 inline-flex rounded-full px-2 py-0.5 align-middle text-[11px] font-semibold text-white" style="background-color: #e23b3b">Not set</span>
+                                                @endif
+                                            </h2>
                                             @if ($exercise->group)
                                                 <p class="text-xs text-neutral-500">{{ $exercise->group }}</p>
                                             @endif
@@ -155,7 +160,12 @@
                                     <x-app-icon name="dumbbell" class="size-5" />
                                 </span>
                                 <span class="min-w-0 flex-1">
-                                    <span class="block text-sm font-semibold">{{ $exercise->name }}</span>
+                                    <span class="block text-sm font-semibold">
+                                        {{ $exercise->name }}
+                                        @if (! $assessments[$exercise->id]['weight'])
+                                            <span class="ml-2 inline-flex rounded-full px-2 py-0.5 align-middle text-[11px] font-semibold text-white" style="background-color: #e23b3b">Not set</span>
+                                        @endif
+                                    </span>
                                     @if ($exercise->group)
                                         <span class="block text-xs text-neutral-500">{{ $exercise->group }}</span>
                                     @endif

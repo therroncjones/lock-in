@@ -158,7 +158,7 @@ class HomeTest extends TestCase
             ->assertSee('Add your one rep max')
             ->assertSee('Bench, squat, and deadlift are not on record yet.')
             ->assertSee('data-one-rep-max-alert="3"', false)
-            ->assertSee('ml-auto grid size-5', false);
+            ->assertSee('ml-auto grid shrink-0', false);
 
         OneRepMax::query()->create([
             'user_id' => $user->id,
@@ -193,6 +193,26 @@ class HomeTest extends TestCase
             ->assertOk()
             ->assertDontSee('Add your one rep max')
             ->assertDontSee('data-one-rep-max-alert=', false);
+    }
+
+    public function test_a_new_account_is_asked_for_the_core_lifts_before_the_library_is_seeded(): void
+    {
+        $admin = User::factory()->administrator()->create();
+        $guest = User::factory()->guest()->create();
+
+        $this->actingAs($admin)
+            ->get(route('home'))
+            ->assertOk()
+            ->assertSee('Add your one rep max')
+            ->assertSee('Bench, squat, and deadlift are not on record yet.')
+            ->assertSee('data-one-rep-max-alert="3"', false);
+
+        $this->actingAs($guest)
+            ->get(route('home'))
+            ->assertOk()
+            ->assertSee('data-one-rep-max-alert="3"', false);
+
+        $this->assertSame(3, Exercise::query()->whereNull('user_id')->whereIn('name', ['Bench Press', 'Barbell Back Squat', 'Conventional Deadlift'])->count());
     }
 
     public function test_a_run_shows_on_the_home_week_and_in_todays_plan(): void
