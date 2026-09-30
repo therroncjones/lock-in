@@ -1,0 +1,36 @@
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+
+@theme {
+    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+        'Segoe UI Symbol', 'Noto Color Emoji';
+}
+
+i.app-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+i.app-icon.size-3 {
+    font-size: 0.75rem;
+}
+
+i.app-icon.size-3\.5 {
+    font-size: 0.875rem;
+}
+
+i.app-icon.size-4 {
+    font-size: 1rem;
+}
+
+i.app-icon.size-5 {
+    font-size: 1.25rem;
+}
+
+i.app-icon.size-6 {
+    font-size: 1.5rem;
+}
