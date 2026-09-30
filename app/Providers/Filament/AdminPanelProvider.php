@@ -4,6 +4,7 @@ namespace App\Providers\Filament;
 
 use App\Filament\Auth\Register;
 use Filament\Http\Middleware\Authenticate;
+use Filament\View\PanelsRenderHook;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
@@ -28,6 +29,7 @@ class AdminPanelProvider extends PanelProvider
             ->path('admin')
             ->login()
             ->registration(Register::class)
+            ->renderHook(PanelsRenderHook::HEAD_END, fn () => view('partials.share-meta'))
             ->passwordReset()
             ->profile()
             ->colors([

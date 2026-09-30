@@ -18,6 +18,8 @@ class OneRepMaxCalculatorTest extends TestCase
             ->assertOk()
             ->assertSee('Enter a one rep max to see the loads.')
             ->assertSee('One rep max weight', false)
+            ->assertSee('property="og:image"', false)
+            ->assertSee('/share.jpg', false)
             ->assertDontSee('Add a known max');
 
         $this->get(route('filament.admin.auth.login'))

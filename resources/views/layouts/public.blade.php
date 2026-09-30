@@ -5,6 +5,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
         <meta name="csrf-token" content="{{ csrf_token() }}">
         <title>@isset($title){{ $title }}@else @yield('title', 'One Rep Max') @endisset — {{ config('app.name') }}</title>
+        @include('partials.share-meta')
         @fonts
         <script src="https://kit.fontawesome.com/c4118a5df7.js" crossorigin="anonymous"></script>
         @vite(['resources/css/app.css', 'resources/js/app.js'])
