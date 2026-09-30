@@ -1,11 +1,11 @@
-<div class="mx-auto flex w-full max-w-5xl flex-col gap-4 px-4 py-5 md:px-8 md:py-8">
-    <header>
-        <h1 class="text-2xl font-bold tracking-tight">One Rep Max</h1>
-        <p class="mt-1 max-w-xl text-sm text-neutral-500">Enter a one rep max. Percentages and plates are calculated from that weight.</p>
-    </header>
+<div class="rounded-3xl bg-white p-4 shadow-sm ring-1 ring-neutral-200/70">
+    <div>
+        <h2 class="text-lg font-bold tracking-tight">Percentages and plates</h2>
+        <p class="mt-1 text-sm text-neutral-500">Enter a one rep max. The loads below are calculated from that weight.</p>
+    </div>
 
-    <section class="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-neutral-200/70">
-        <div class="flex flex-col gap-4 lg:flex-row lg:items-end">
+    <div class="mt-4">
+        <div class="flex flex-col gap-4">
             <label class="flex w-full flex-col gap-1 lg:max-w-xs">
                 <span class="text-[11px] font-semibold tracking-wide text-neutral-400">ONE REP MAX (LBS)</span>
                 <input
@@ -41,14 +41,14 @@
         @error('max')
             <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
         @enderror
-    </section>
+    </div>
 
     @if ($rows === [])
-        <p class="rounded-3xl border border-dashed border-neutral-300 px-4 py-6 text-center text-sm text-neutral-500">Enter a one rep max to see the loads.</p>
+        <p class="mt-4 rounded-2xl border border-dashed border-neutral-300 px-4 py-6 text-center text-sm text-neutral-500">Enter a one rep max to see the loads.</p>
     @else
-        <section class="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-neutral-200/70">
+        <div class="mt-4 border-t border-neutral-100" style="padding-top: 1rem">
             <h2 class="text-sm font-semibold">Percentage Based Weights</h2>
-            <ul class="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-5 lg:grid-cols-9">
+            <ul class="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-5">
                 @foreach ($rows as $row)
                     @if ($row['key'] !== 'custom')
                         <li class="flex">
@@ -107,6 +107,6 @@
             @error('customPercent')
                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
             @enderror
-        </section>
+        </div>
     @endif
 </div>

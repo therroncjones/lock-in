@@ -18,6 +18,13 @@ class OneRepMaxCalculatorTest extends TestCase
             ->assertOk()
             ->assertSee('Enter a one rep max to see the loads.')
             ->assertSee('One rep max weight', false)
+            ->assertSee('One Rep Max Calculator')
+            ->assertSee('More than a calculator.')
+            ->assertSee('Sign Up')
+            ->assertSee('Log your workouts')
+            ->assertSee('See real progress')
+            ->assertSee('Stay consistent')
+            ->assertSee(route('filament.admin.auth.register'), false)
             ->assertSee('property="og:image"', false)
             ->assertSee('/share.jpg', false)
             ->assertDontSee('Add a known max');
