@@ -1,4 +1,23 @@
-@php $isOpen = $expanded[$entry->id] ?? false; @endphp
+@php
+    $isOpen = $expanded[$entry->id] ?? false;
+    $measure = \App\Support\SetMeasure::normalize($entry->exercise->measure);
+    $tracksWeight = \App\Support\SetMeasure::tracksWeight($measure);
+    $plannedQuantityLabel = match ($measure) {
+        'time' => 'Planned Time',
+        'calories' => 'Planned Calories',
+        default => 'Planned Reps',
+    };
+    $actualQuantityLabel = match ($measure) {
+        'time' => 'Actual Time',
+        'calories' => 'Actual Calories',
+        default => 'Actual Reps',
+    };
+    $quantityPlaceholder = match ($measure) {
+        'time' => '0:00',
+        'calories' => 'Calories',
+        default => 'Reps',
+    };
+@endphp
 <article wire:key="exercise-{{ $entry->id }}" class="rounded-3xl bg-white p-4 shadow-sm ring-1 ring-neutral-200/70">
     <div class="flex items-center gap-3">
         <span class="grid size-8 shrink-0 place-items-center rounded-xl bg-neutral-100 text-sm font-semibold text-neutral-700">{{ $entry->position }}</span>
@@ -26,8 +45,25 @@
                 @else
                     {{ $entry->exercise->group ?? 'Custom' }}
                 @endif
+                @if (! $tracksWeight)
+                    · {{ \App\Support\SetMeasure::label($measure) }}
+                @endif
                 · {{ $entry->sets->count() }} {{ $entry->sets->count() === 1 ? 'set' : 'sets' }}
             </p>
+            @if ($entry->exercise->approved_at === null && $entry->exercise->user_id === auth()->id() && ! $isComplete)
+                <label class="mt-2 flex items-center gap-2 text-sm text-neutral-500">
+                    <span class="shrink-0">Tracked by</span>
+                    <select
+                        wire:change="setExerciseMeasure({{ $entry->exercise->id }}, $event.target.value)"
+                        aria-label="How {{ $entry->exercise->name }} is tracked"
+                        class="rounded-xl border border-neutral-200 bg-white px-2 py-1 text-sm outline-none focus:border-[#2f6bff]"
+                    >
+                        @foreach (\App\Support\SetMeasure::Labels as $value => $label)
+                            <option value="{{ $value }}" @selected($measure === $value)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                </label>
+            @endif
         </div>
         <button type="button" wire:click="toggleExercise({{ $entry->id }})" class="grid size-8 place-items-center text-neutral-400 hover:text-neutral-700" aria-label="{{ $isOpen ? 'Collapse' : 'Expand' }} {{ $entry->exercise->name }}">
             <x-app-icon :name="$isOpen ? 'chevron-up' : 'chevron-down'" class="size-5" />
@@ -47,6 +83,7 @@
                 >
                 <div class="grid grid-cols-[1.75rem_minmax(0,1fr)_minmax(0,1fr)_2rem_2rem] items-end gap-2">
                     <span class="mb-2 text-sm font-semibold text-neutral-500">{{ $set->position }}</span>
+                    @if ($tracksWeight)
                     <label class="flex min-w-0 flex-col gap-1">
                         <span class="whitespace-nowrap text-center text-[11px] font-semibold text-neutral-400">Planned Weight (lbs)</span>
                         <input
@@ -85,6 +122,27 @@
                             <p class="text-sm text-red-600">{{ $message }}</p>
                         @enderror
                     </label>
+                    @else
+                    <label class="col-span-2 flex min-w-0 flex-col gap-1">
+                        <span class="whitespace-nowrap text-center text-[11px] font-semibold text-neutral-400">{{ $plannedQuantityLabel }}</span>
+                        <input
+                            type="text"
+                            inputmode="{{ $measure === 'time' ? 'text' : 'numeric' }}"
+                            wire:model.blur="setReps.{{ $set->id }}"
+                            placeholder="{{ $quantityPlaceholder }}"
+                            aria-label="{{ $plannedQuantityLabel }} for set {{ $set->position }}"
+                            @readonly($isComplete)
+                            @class([
+                                'w-full rounded-xl border border-neutral-200 px-2 py-2 text-center text-sm outline-none focus:border-[#2f6bff]',
+                                'bg-neutral-50' => $isComplete,
+                                'bg-white' => ! $isComplete,
+                            ])
+                        >
+                        @error('setReps.'.$set->id)
+                            <p class="text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </label>
+                    @endif
                     @if ($isComplete)
                         <span></span>
                     @endif
@@ -113,6 +171,7 @@
                 </div>
                 <div class="grid grid-cols-[1.75rem_minmax(0,1fr)_minmax(0,1fr)_2rem_2rem] gap-2">
                     <span></span>
+                    @if ($tracksWeight)
                     <label class="flex min-w-0 flex-col gap-1">
                         <span class="text-center text-[11px] font-semibold tracking-wide text-neutral-400">Actual Weight</span>
                         <input
@@ -151,6 +210,27 @@
                             <p class="text-sm text-red-600">{{ $message }}</p>
                         @enderror
                     </label>
+                    @else
+                    <label class="col-span-2 flex min-w-0 flex-col gap-1">
+                        <span class="whitespace-nowrap text-center text-[11px] font-semibold text-neutral-400">{{ $actualQuantityLabel }}</span>
+                        <input
+                            type="text"
+                            inputmode="{{ $measure === 'time' ? 'text' : 'numeric' }}"
+                            wire:model.blur="setActualReps.{{ $set->id }}"
+                            placeholder="{{ $quantityPlaceholder }}"
+                            aria-label="{{ $actualQuantityLabel }} for set {{ $set->position }}"
+                            @readonly($isComplete)
+                            @class([
+                                'w-full rounded-xl border border-neutral-200 px-2 py-2 text-center text-sm outline-none focus:border-[#2f6bff]',
+                                'bg-neutral-50' => $isComplete,
+                                'bg-white' => ! $isComplete,
+                            ])
+                        >
+                        @error('setActualReps.'.$set->id)
+                            <p class="text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </label>
+                    @endif
                 </div>
                 </div>
             @endforeach

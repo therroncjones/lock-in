@@ -7,7 +7,9 @@
         @if ($choice->approved_at === null)
             <span class="text-sm text-amber-700">Pending approval</span>
         @elseif ($showsGroupLabels && $choice->group)
-            <span class="text-sm text-neutral-500">{{ $choice->group }}</span>
+            <span class="text-sm text-neutral-500">{{ $choice->group }}@if (! \App\Support\SetMeasure::tracksWeight($choice->measure)) · {{ \App\Support\SetMeasure::label($choice->measure) }}@endif</span>
+        @elseif (! \App\Support\SetMeasure::tracksWeight($choice->measure))
+            <span class="text-sm text-neutral-500">{{ \App\Support\SetMeasure::label($choice->measure) }}</span>
         @endif
     </span>
     <button type="button" wire:click="addExercise({{ $choice->id }})" class="inline-flex h-8 shrink-0 items-center justify-center rounded-full px-3 text-sm font-semibold text-[#2f6bff] ring-1 ring-[#2f6bff]/40 hover:bg-[#e8f0ff]">

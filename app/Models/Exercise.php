@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['user_id', 'name', 'group', 'session_types', 'approved_at'])]
+#[Fillable(['user_id', 'name', 'group', 'measure', 'session_types', 'approved_at'])]
 class Exercise extends Model
 {
     /**

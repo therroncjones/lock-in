@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Exercise;
+use App\Support\SetMeasure;
 use Illuminate\Database\Seeder;
 
 class ExerciseSeeder extends Seeder
@@ -19,6 +20,7 @@ class ExerciseSeeder extends Seeder
                     'name' => $name,
                 ]);
                 $exercise->group = $group;
+                $exercise->measure = SetMeasure::forExerciseName($name);
                 $exercise->session_types = self::typesFor($name, $group);
 
                 if ($exercise->approved_at === null) {

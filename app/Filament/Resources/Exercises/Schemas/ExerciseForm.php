@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Exercises\Schemas;
 
 use App\Models\Workout;
+use App\Support\SetMeasure;
 use Database\Seeders\ExerciseSeeder;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Select;
@@ -30,6 +31,12 @@ class ExerciseForm
                     ->searchable()
                     ->native(false)
                     ->placeholder('No group'),
+                Select::make('measure')
+                    ->options(SetMeasure::Labels)
+                    ->default(SetMeasure::Reps)
+                    ->required()
+                    ->native(false)
+                    ->helperText('Reps keep weight and reps. Time is a duration. Calories is a calorie count.'),
                 CheckboxList::make('session_types')
                     ->label('Sessions')
                     ->options(array_combine(Workout::SuggestedTypes, Workout::SuggestedTypes))

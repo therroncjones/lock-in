@@ -80,8 +80,8 @@ class LogWorkoutTest extends TestCase
             ->assertSee('Barbell Back Squat')
             ->assertSee('Planned Weight (lbs)')
             ->assertSee('Planned Reps')
-            ->assertSee('ACTUAL WEIGHT')
-            ->assertSee('ACTUAL REPS')
+            ->assertSee('Actual Weight')
+            ->assertSee('Actual Reps')
             ->assertSee('Add Set');
 
         $entry = WorkoutExercise::query()->firstOrFail();
@@ -652,5 +652,48 @@ TEXT;
         $this->assertStringContainsString('navigator.clipboard.writeText', $script);
         $this->assertStringContainsString('Battle Ropes', $script);
         $this->assertStringContainsString('Barbell Row', $script);
+    }
+
+    public function test_time_and_calorie_exercises_use_their_own_inputs(): void
+    {
+        $user = User::factory()->guest()->create();
+        $plank = Exercise::query()->where('name', 'Plank')->firstOrFail();
+
+        $this->actingAs($user);
+
+        $component = Livewire::test(LogWorkout::class)
+            ->set('type', 'Strength - Full Body')
+            ->call('addExercise', $plank->id)
+            ->assertSee('Planned Time')
+            ->assertSee('Actual Time')
+            ->assertDontSee('Planned Weight (lbs)');
+
+        $set = WorkoutSet::query()->firstOrFail();
+
+        $component
+            ->set("setReps.{$set->id}", '1:30')
+            ->assertHasNoErrors()
+            ->set("setActualReps.{$set->id}", '1:00')
+            ->assertHasNoErrors()
+            ->set("setReps.{$set->id}", 'nope')
+            ->assertHasErrors(["setReps.{$set->id}"]);
+
+        $set->refresh();
+        $this->assertSame(90, $set->reps);
+        $this->assertSame(60, $set->actual_reps);
+        $this->assertNull($set->weight);
+
+        Livewire::test(LogWorkout::class)
+            ->call('openExercisePicker')
+            ->set('exerciseQuery', 'Assault Bike')
+            ->set('customMeasure', 'calories')
+            ->call('addCustomExercise')
+            ->assertSee('Planned Calories')
+            ->assertSee('Tracked by');
+
+        $bike = Exercise::query()->where('name', 'Assault Bike')->firstOrFail();
+
+        $this->assertSame('calories', $bike->measure);
+        $this->assertSame($user->id, $bike->user_id);
     }
 }

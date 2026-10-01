@@ -97,6 +97,9 @@ class ExerciseManagementTest extends TestCase
         $this->assertContains('Strength - Full Body', $airSquat->session_types);
         $this->assertSame('Upper Body', $arnold?->group);
         $this->assertSame('Core', $crunch?->group);
+        $this->assertSame('reps', Exercise::query()->where('name', 'Bench Press')->first()?->measure);
+        $this->assertSame('time', Exercise::query()->where('name', 'Plank')->first()?->measure);
+        $this->assertSame('time', Exercise::query()->where('name', 'Rowing')->first()?->measure);
         $this->assertSame('Full Body', $snatch?->group);
         $this->assertSame('Mobility', $jefferson?->group);
         $this->assertNull(Exercise::query()->where('name', 'Rowing Machine')->first());

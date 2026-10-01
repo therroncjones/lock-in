@@ -5,6 +5,7 @@ namespace App\Support;
 use App\Models\Workout;
 use App\Models\WorkoutExercise;
 use App\Models\WorkoutSet;
+use App\Support\SetMeasure;
 
 class WorkoutText
 {
@@ -47,7 +48,7 @@ class WorkoutText
         $lines = [$entry->exercise->name];
 
         foreach ($entry->sets as $set) {
-            $line = self::setLine($set);
+            $line = self::setLine($set, $entry->exercise->measure);
 
             if ($line !== null) {
                 $lines[] = $line;
@@ -57,10 +58,15 @@ class WorkoutText
         return implode("\n", $lines);
     }
 
-    private static function setLine(WorkoutSet $set): ?string
+    private static function setLine(WorkoutSet $set, ?string $measure): ?string
     {
-        $plan = self::pair($set->weight, $set->reps);
-        $actual = self::pair($set->actual_weight, $set->actual_reps);
+        if (! SetMeasure::tracksWeight($measure)) {
+            $plan = SetMeasure::describe($measure, $set->reps);
+            $actual = SetMeasure::describe($measure, $set->actual_reps);
+        } else {
+            $plan = self::pair($set->weight, $set->reps);
+            $actual = self::pair($set->actual_weight, $set->actual_reps);
+        }
 
         if ($plan === null && $actual === null) {
             return null;

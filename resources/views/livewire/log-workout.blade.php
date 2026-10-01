@@ -329,6 +329,19 @@
                 </ul>
 
                 @if ($canAddCustomExercise)
+                    <div class="mt-2 flex gap-2" role="group" aria-label="How this exercise is tracked">
+                        @foreach (\App\Support\SetMeasure::Labels as $value => $label)
+                            <button
+                                type="button"
+                                wire:click="$set('customMeasure', '{{ $value }}')"
+                                @class([
+                                    'inline-flex h-8 flex-1 items-center justify-center rounded-full text-sm font-semibold',
+                                    'bg-neutral-900 text-white' => $customMeasure === $value,
+                                    'bg-neutral-100 text-neutral-600' => $customMeasure !== $value,
+                                ])
+                            >{{ $label }}</button>
+                        @endforeach
+                    </div>
                     <button type="button" wire:click="addCustomExercise" class="mt-2 w-full shrink-0 rounded-2xl bg-neutral-100 py-2.5 text-sm font-semibold hover:bg-neutral-200">
                         Add “{{ trim($exerciseQuery) }}”
                     </button>

@@ -8,6 +8,7 @@ use App\Models\Run;
 use App\Models\Workout;
 use App\Models\WorkoutExercise;
 use App\Models\WorkoutSet;
+use App\Support\SetMeasure;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -191,25 +192,26 @@ class Progress extends Component
             return null;
         }
 
-        $best = $this->bestSet($sets);
+        $measure = SetMeasure::normalize(Exercise::query()->whereKey($exerciseId)->value('measure'));
+        $best = $this->bestSet($sets, $measure);
         $recent = $sets->sort(fn (WorkoutSet $left, WorkoutSet $right): int => $this->compareRecent($left, $right))->values();
         $setPages = $this->showingEverySet ? $this->setsPage($recent) : null;
         $visible = $setPages === null ? $recent->take(6) : $setPages->getCollection();
         $oneRepMax = $this->oneRepMaxSummary($exerciseId);
-        $volumeComparison = $this->volumeComparison($sets, $exerciseId);
+        $volumeComparison = $this->volumeComparison($sets, $exerciseId, $measure);
         $lastPerformed = $recent->first()->workoutExercise->workout->performed_on;
         $records = $this->oneRepMaxRecords($exerciseId);
         $dailyVolume = $sets
             ->groupBy(fn (WorkoutSet $set): string => $set->workoutExercise->workout->performed_on->toDateString())
             ->sortKeys()
-            ->map(fn (Collection $day): float => $this->rawVolume($day))
+            ->map(fn (Collection $day): float => $this->score($day, $measure))
             ->values();
 
         return [
             'oneRepMax' => $oneRepMax,
             'maxBars' => $oneRepMax ? $this->barHeights($oneRepMax['points']->pluck('value')) : [],
             'bestSet' => [
-                'label' => $this->setLabel($best),
+                'label' => $this->setLabel($best, $measure),
                 'date' => $best->workoutExercise->workout->performed_on->format('M j, Y'),
             ],
             'volume' => $this->displayVolume($sets),
@@ -221,18 +223,40 @@ class Progress extends Component
             'lastPerformed' => $lastPerformed->format('M j, Y'),
             'intensity' => $this->intensity($exerciseId, $best),
             'actuals' => $this->actualComparisons($exerciseId),
+            'measure' => $measure,
+            'bestCaption' => match ($measure) {
+                SetMeasure::Time => 'Longest set logged in this range.',
+                SetMeasure::Calories => 'Highest calorie set logged in this range.',
+                default => 'Heaviest set logged in this range.',
+            },
+            'volumeCaption' => match ($measure) {
+                SetMeasure::Time => 'Time added up.',
+                SetMeasure::Calories => 'Calories added up.',
+                default => 'Weight times reps, added up.',
+            },
+            'volumeText' => $this->volumeText($sets, $measure),
+            'setHeading' => match ($measure) {
+                SetMeasure::Time => 'Time',
+                SetMeasure::Calories => 'Calories',
+                default => 'Weight × Reps',
+            },
+            'chartHeading' => match ($measure) {
+                SetMeasure::Time => 'Longest Set',
+                SetMeasure::Calories => 'Highest Calories',
+                default => 'Heaviest Set',
+            },
             'sets' => $visible->map(fn (WorkoutSet $set): array => [
                 'id' => $set->id,
-                'label' => $this->setLabel($set),
+                'label' => $this->setLabel($set, $measure),
                 'date' => $set->workoutExercise->workout->performed_on->format('M j, Y'),
-                'volume' => $this->setVolumeLabel($set),
+                'volume' => $this->setVolumeLabel($set, $measure),
                 'percent' => $this->setPercent($records, $set),
                 'isPr' => $set->id === $best->id,
             ])->values(),
             'hasMoreSets' => $sets->count() > 6,
             'setPages' => $setPages,
             'chart' => $oneRepMax ? $this->chart($oneRepMax['points']) : null,
-            'heaviestChart' => $this->chart($this->heaviestPoints($sets)),
+            'heaviestChart' => $this->chart($this->heaviestPoints($sets, $measure)),
         ];
     }
 
@@ -318,10 +342,10 @@ class Progress extends Component
      * @param  Collection<int, WorkoutSet>  $sets
      * @return array{change: ?int, label: string}
      */
-    private function volumeComparison(Collection $sets, int $exerciseId): array
+    private function volumeComparison(Collection $sets, int $exerciseId, string $measure): array
     {
         if ($this->range === 'all') {
-            return $this->splitVolume($sets);
+            return $this->splitVolume($sets, $measure);
         }
 
         if ($this->range === 'month') {
@@ -329,7 +353,7 @@ class Progress extends Component
             $priorEnd = now()->copy()->subMonthNoOverflow()->addDay()->startOfDay();
 
             return [
-                'change' => $this->percentChange($this->rawVolume($sets), $this->rawVolume($this->setsInRange($exerciseId, $priorStart, $priorEnd))),
+                'change' => $this->percentChange($this->score($sets, $measure), $this->score($this->setsInRange($exerciseId, $priorStart, $priorEnd), $measure)),
                 'label' => 'vs last month',
             ];
         }
@@ -341,10 +365,10 @@ class Progress extends Component
         }
 
         $days = max(1, (int) $start->diffInDays(now()->copy()->startOfDay()));
-        $prior = $this->rawVolume($this->setsInRange($exerciseId, $start->copy()->subDays($days), $start));
+        $prior = $this->score($this->setsInRange($exerciseId, $start->copy()->subDays($days), $start), $measure);
 
         return [
-            'change' => $this->percentChange($this->rawVolume($sets), $prior),
+            'change' => $this->percentChange($this->score($sets, $measure), $prior),
             'label' => $this->range === 'year' ? 'vs last year' : 'vs prior period',
         ];
     }
@@ -353,7 +377,7 @@ class Progress extends Component
      * @param  Collection<int, WorkoutSet>  $sets
      * @return array{change: ?int, label: string}
      */
-    private function splitVolume(Collection $sets): array
+    private function splitVolume(Collection $sets, string $measure): array
     {
         $first = $sets->min(fn (WorkoutSet $set) => $set->workoutExercise->workout->performed_on);
         $last = $sets->max(fn (WorkoutSet $set) => $set->workoutExercise->workout->performed_on);
@@ -367,7 +391,7 @@ class Progress extends Component
         $later = $sets->reject(fn (WorkoutSet $set): bool => $set->workoutExercise->workout->performed_on->lte($mid));
 
         return [
-            'change' => $this->percentChange($this->rawVolume($later), $this->rawVolume($earlier)),
+            'change' => $this->percentChange($this->score($later, $measure), $this->score($earlier, $measure)),
             'label' => 'vs earlier half',
         ];
     }
@@ -470,8 +494,12 @@ class Progress extends Component
         return (int) round(((float) $weight / (float) $max->weight) * 100);
     }
 
-    private function setVolumeLabel(WorkoutSet $set): string
+    private function setVolumeLabel(WorkoutSet $set, string $measure): string
     {
+        if (! SetMeasure::tracksWeight($measure)) {
+            return SetMeasure::describe($measure, $this->performedAmount($set)) ?? '—';
+        }
+
         $weight = $this->performedWeight($set);
 
         if ($weight === null || $weight === '') {
@@ -532,7 +560,7 @@ class Progress extends Component
                     $workout->whereDate('performed_on', '>=', $start->toDateString());
                 }
             })
-            ->with(['sets', 'workout'])
+            ->with(['sets', 'workout', 'exercise'])
             ->get()
             ->sortByDesc(fn (WorkoutExercise $entry) => $entry->workout->performed_on)
             ->first();
@@ -545,6 +573,8 @@ class Progress extends Component
             ->filter(fn (WorkoutSet $set): bool => $set->actual_weight !== null || $set->actual_reps !== null)
             ->sortBy('position');
 
+        $measure = SetMeasure::normalize($latest->exercise->measure);
+
         if ($sets->isNotEmpty()) {
             return $sets
                 ->map(fn (WorkoutSet $set): array => $this->compareActual(
@@ -552,6 +582,7 @@ class Progress extends Component
                     $set->actual_reps,
                     $set,
                     $latest->workout->performed_on->format('M j, Y'),
+                    $measure,
                 ))
                 ->values()
                 ->all();
@@ -576,6 +607,7 @@ class Progress extends Component
                 $latest->actual_reps,
                 $planned instanceof WorkoutSet ? $planned : null,
                 $latest->workout->performed_on->format('M j, Y'),
+                $measure,
             ),
         ];
     }
@@ -583,20 +615,23 @@ class Progress extends Component
     /**
      * @return array{actual: string, planned: string, delta: string, direction: int, status: string, date: string}
      */
-    private function compareActual(mixed $actualWeight, mixed $actualReps, ?WorkoutSet $planned, string $date): array
+    private function compareActual(mixed $actualWeight, mixed $actualReps, ?WorkoutSet $planned, string $date, string $measure = SetMeasure::Reps): array
     {
         $notes = [];
         $direction = 0;
+        $measure = SetMeasure::normalize($measure);
 
-        if ($actualWeight !== null && $actualWeight !== '' && $planned instanceof WorkoutSet && $planned->weight !== null && $planned->weight !== '') {
+        if (SetMeasure::tracksWeight($measure) && $actualWeight !== null && $actualWeight !== '' && $planned instanceof WorkoutSet && $planned->weight !== null && $planned->weight !== '') {
             $delta = (float) $actualWeight - (float) $planned->weight;
             $notes[] = $this->signedAmount($delta, 'lbs');
             $direction = $delta <=> 0;
         }
 
-        if ($actualReps !== null && $planned instanceof WorkoutSet) {
+        if ($actualReps !== null && $planned instanceof WorkoutSet && $planned->reps !== null) {
             $delta = (int) $actualReps - (int) $planned->reps;
-            $notes[] = $this->signedAmount($delta, abs($delta) === 1 ? 'rep' : 'reps');
+            $notes[] = SetMeasure::tracksWeight($measure)
+                ? $this->signedAmount($delta, abs($delta) === 1 ? 'rep' : 'reps')
+                : SetMeasure::signedDelta($measure, $delta);
 
             if ($direction === 0) {
                 $direction = $delta <=> 0;
@@ -604,8 +639,8 @@ class Progress extends Component
         }
 
         return [
-            'actual' => $this->actualLabel($actualWeight, $actualReps),
-            'planned' => $planned instanceof WorkoutSet ? $this->plannedLabel($planned) : 'No planned set',
+            'actual' => $this->actualLabel($actualWeight, $actualReps, $measure),
+            'planned' => $planned instanceof WorkoutSet ? ($this->plannedLabel($planned, $measure) ?? 'No planned set') : 'No planned set',
             'delta' => $notes === [] ? 'Logged' : implode(', ', $notes),
             'direction' => $direction,
             'status' => $direction > 0 ? 'Ahead' : ($direction < 0 ? 'Under plan' : 'On Track'),
@@ -658,20 +693,9 @@ class Progress extends Component
         ];
     }
 
-    private function actualLabel(mixed $weight, mixed $reps): string
+    private function actualLabel(mixed $weight, mixed $reps, string $measure = SetMeasure::Reps): string
     {
-        $weight = $weight === null || $weight === '' ? null : $this->displayWeight($weight);
-        $reps = $reps === null || $reps === '' ? null : (int) $reps;
-
-        if ($weight !== null && $weight !== '' && $reps !== null) {
-            return $weight.' × '.$reps;
-        }
-
-        if ($weight !== null && $weight !== '') {
-            return $weight.' lbs';
-        }
-
-        return ($reps ?? 0).' reps';
+        return SetMeasure::describe($measure, $reps, $weight) ?? '—';
     }
 
     private function signedAmount(float|int $delta, string $unit): string
@@ -693,23 +717,37 @@ class Progress extends Component
      * @param  Collection<int, WorkoutSet>  $sets
      * @return Collection<int, array{date: string, month: string, value: int}>
      */
-    private function heaviestPoints(Collection $sets): Collection
+    private function heaviestPoints(Collection $sets, string $measure): Collection
     {
         return $sets
-            ->filter(function (WorkoutSet $set): bool {
+            ->filter(function (WorkoutSet $set) use ($measure): bool {
+                if (! SetMeasure::tracksWeight($measure)) {
+                    return $this->performedAmount($set) > 0;
+                }
+
                 $weight = $this->performedWeight($set);
 
                 return $weight !== null && $weight !== '';
             })
             ->groupBy(fn (WorkoutSet $set): string => $set->workoutExercise->workout->performed_on->toDateString())
-            ->map(function (Collection $daySets, string $date): array {
+            ->map(function (Collection $daySets, string $date) use ($measure): array {
                 /** @var WorkoutSet $top */
-                $top = $daySets->sortByDesc(fn (WorkoutSet $set): float => (float) $this->performedWeight($set))->first();
+                $top = $daySets->sortByDesc(function (WorkoutSet $set) use ($measure): float {
+                    if (! SetMeasure::tracksWeight($measure)) {
+                        return (float) $this->performedAmount($set);
+                    }
+
+                    return (float) $this->performedWeight($set);
+                })->first();
+
+                $value = SetMeasure::tracksWeight($measure)
+                    ? (float) $this->performedWeight($top)
+                    : (float) $this->performedAmount($top);
 
                 return [
                     'date' => $date,
                     'month' => Carbon::parse($date)->format('M'),
-                    'value' => (int) round((float) $this->performedWeight($top)),
+                    'value' => (int) round($value),
                 ];
             })
             ->sortBy('date')
@@ -875,9 +913,15 @@ class Progress extends Component
     /**
      * @param  Collection<int, WorkoutSet>  $sets
      */
-    private function bestSet(Collection $sets): WorkoutSet
+    private function bestSet(Collection $sets, string $measure): WorkoutSet
     {
-        return $sets->sort(function (WorkoutSet $left, WorkoutSet $right): int {
+        return $sets->sort(function (WorkoutSet $left, WorkoutSet $right) use ($measure): int {
+            if (! SetMeasure::tracksWeight($measure)) {
+                $amount = $this->performedAmount($right) <=> $this->performedAmount($left);
+
+                return $amount !== 0 ? $amount : $this->compareRecent($left, $right);
+            }
+
             $weight = $this->weightValue($right) <=> $this->weightValue($left);
 
             if ($weight !== 0) {
@@ -1080,27 +1124,55 @@ class Progress extends Component
         return number_format($volume, $decimals);
     }
 
-    private function plannedLabel(WorkoutSet $set): string
+    /**
+     * @param  Collection<int, WorkoutSet>  $sets
+     */
+    private function score(Collection $sets, string $measure): float
     {
-        $reps = (int) $set->reps;
-
-        if ($set->weight === null || $set->weight === '') {
-            return $reps.' reps';
+        if (SetMeasure::tracksWeight($measure)) {
+            return $this->rawVolume($sets);
         }
 
-        return $this->displayWeight($set->weight).' × '.$reps;
+        return $sets->sum(fn (WorkoutSet $set): float => (float) $this->performedAmount($set));
     }
 
-    private function setLabel(WorkoutSet $set): string
+    /**
+     * @param  Collection<int, WorkoutSet>  $sets
+     */
+    private function volumeText(Collection $sets, string $measure): string
     {
-        $reps = $this->performedReps($set);
-        $weight = $this->performedWeight($set);
-
-        if ($weight === null || $weight === '') {
-            return $reps.' reps';
+        if ($measure === SetMeasure::Time) {
+            return SetMeasure::formatDuration((int) round($this->score($sets, $measure)));
         }
 
-        return $this->displayWeight($weight).' × '.$reps;
+        if ($measure === SetMeasure::Calories) {
+            $count = (int) round($this->score($sets, $measure));
+
+            return number_format($count).' '.($count === 1 ? 'calorie' : 'calories');
+        }
+
+        return $this->displayVolume($sets).' lbs';
+    }
+
+    private function performedAmount(WorkoutSet $set): int
+    {
+        if ($set->actual_reps !== null) {
+            return (int) $set->actual_reps;
+        }
+
+        return (int) $set->reps;
+    }
+
+    private function plannedLabel(WorkoutSet $set, string $measure = SetMeasure::Reps): ?string
+    {
+        return SetMeasure::describe($measure, $set->reps, $set->weight);
+    }
+
+    private function setLabel(WorkoutSet $set, string $measure = SetMeasure::Reps): string
+    {
+        $amount = SetMeasure::tracksWeight($measure) ? $this->performedReps($set) : $this->performedAmount($set);
+
+        return SetMeasure::describe($measure, $amount, $this->performedWeight($set)) ?? '—';
     }
 
     private function displayWeight(mixed $weight): string

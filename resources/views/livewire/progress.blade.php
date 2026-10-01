@@ -118,7 +118,7 @@
                             </span>
                             <p class="text-xs text-neutral-500">Best Set</p>
                         </div>
-                        <p class="mt-1 text-[11px] leading-snug text-neutral-400">Heaviest set logged in this range.</p>
+                        <p class="mt-1 text-[11px] leading-snug text-neutral-400">{{ $summary['bestCaption'] }}</p>
                         <p class="mt-2 text-2xl font-bold">{{ $summary['bestSet']['label'] }}</p>
                         <p class="mt-1 text-xs text-neutral-500">{{ $summary['bestSet']['date'] }}</p>
                     </div>
@@ -131,8 +131,8 @@
                             </span>
                             <p class="text-xs text-neutral-500">Total Volume</p>
                         </div>
-                        <p class="mt-1 text-[11px] leading-snug text-neutral-400">Weight times reps, added up.</p>
-                        <p class="mt-2 text-2xl font-bold">{{ $summary['volume'] }} lbs</p>
+                        <p class="mt-1 text-[11px] leading-snug text-neutral-400">{{ $summary['volumeCaption'] }}</p>
+                        <p class="mt-2 text-2xl font-bold">{{ $summary['volumeText'] }}</p>
                         @if ($summary['volumeChange'] !== null)
                             <p @class([
                                 'mt-1 text-xs font-semibold',
@@ -239,9 +239,9 @@
                 @endif
                 @if ($summary['heaviestChart'])
                     <article class="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-neutral-200/70">
-                        <h2 class="font-semibold">Heaviest Set</h2>
+                        <h2 class="font-semibold">{{ $summary['chartHeading'] }}</h2>
                         @include('livewire.partials.progress-chart', [
-                            'label' => 'Heaviest set over time',
+                            'label' => $summary['chartHeading'].' over time',
                             'chart' => $summary['heaviestChart'],
                         ])
                     </article>
@@ -263,9 +263,11 @@
                             <thead>
                                 <tr class="border-b border-neutral-200 text-xs text-neutral-500">
                                     <th class="py-2 font-medium">Date</th>
-                                    <th class="py-2 font-medium">Weight × Reps</th>
-                                    <th class="py-2 font-medium">Volume</th>
-                                    <th class="py-2 font-medium">% 1RM</th>
+                                    <th class="py-2 font-medium">{{ $summary['setHeading'] }}</th>
+                                    @if ($summary['measure'] === 'reps')
+                                        <th class="py-2 font-medium">Volume</th>
+                                        <th class="py-2 font-medium">% 1RM</th>
+                                    @endif
                                     <th class="py-2 font-medium"></th>
                                 </tr>
                             </thead>
@@ -274,8 +276,10 @@
                                     <tr wire:key="progress-set-{{ $set['id'] }}" class="border-b border-neutral-100">
                                         <td class="py-3 text-neutral-600">{{ $set['date'] }}</td>
                                         <td class="py-3 font-semibold">{{ $set['label'] }}</td>
-                                        <td class="py-3 text-neutral-600">{{ $set['volume'] }}</td>
-                                        <td class="py-3 text-neutral-600">{{ $set['percent'] !== null ? $set['percent'].'%' : '—' }}</td>
+                                        @if ($summary['measure'] === 'reps')
+                                            <td class="py-3 text-neutral-600">{{ $set['volume'] }}</td>
+                                            <td class="py-3 text-neutral-600">{{ $set['percent'] !== null ? $set['percent'].'%' : '—' }}</td>
+                                        @endif
                                         <td class="py-3 text-right">
                                             @if ($set['isPr'])
                                                 <span class="rounded-full bg-emerald-500 px-2 py-1 text-[11px] font-semibold text-white">PR</span>

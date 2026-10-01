@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Exercises\Tables;
 use App\Filament\Resources\Exercises\ExerciseResource;
 use App\Models\Exercise;
 use App\Models\Workout;
+use App\Support\SetMeasure;
 use Database\Seeders\ExerciseSeeder;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
@@ -28,6 +29,9 @@ class ExercisesTable
                     ->sortable(),
                 TextColumn::make('group')
                     ->placeholder('None')
+                    ->sortable(),
+                TextColumn::make('measure')
+                    ->formatStateUsing(fn (?string $state): string => SetMeasure::label($state))
                     ->sortable(),
                 TextColumn::make('session_types')
                     ->label('Sessions')
@@ -59,6 +63,8 @@ class ExercisesTable
                     }),
                 SelectFilter::make('group')
                     ->options(array_combine($groups, $groups)),
+                SelectFilter::make('measure')
+                    ->options(SetMeasure::Labels),
                 SelectFilter::make('session')
                     ->label('Session')
                     ->options(array_combine(Workout::SuggestedTypes, Workout::SuggestedTypes))

@@ -330,6 +330,41 @@ class ProgressTest extends TestCase
             ->assertDontSee('225 × 5');
     }
 
+    public function test_time_and_calorie_progress_use_their_own_units(): void
+    {
+        $user = User::factory()->guest()->create();
+        $plank = Exercise::query()->where('name', 'Plank')->firstOrFail();
+        $bike = Exercise::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Assault Bike',
+            'measure' => 'calories',
+            'group' => 'Cardio',
+            'session_types' => ['Cardio'],
+            'approved_at' => now(),
+        ]);
+
+        $this->logSet($user, $plank, '2026-09-20', null, 90);
+        $this->logSet($user, $plank, '2026-09-22', null, 60);
+        $this->logSet($user, $bike, '2026-09-21', null, 250, 'Cardio');
+
+        $this->actingAs($user);
+        $this->travelTo('2026-09-29 12:00:00');
+
+        Livewire::test(Progress::class)
+            ->assertSet('exercise', $plank->id)
+            ->assertSee('Longest set logged in this range.')
+            ->assertSee('Time added up.')
+            ->assertSee('1:30')
+            ->assertSee('2:30')
+            ->assertSee('Longest Set')
+            ->assertDontSee('Weight times reps, added up.')
+            ->call('filterType', 'Cardio')
+            ->assertSee('250 calories')
+            ->assertSee('Highest calorie set logged in this range.')
+            ->assertSee('Calories added up.')
+            ->assertSee('Highest Calories');
+    }
+
     /**
      * @param  list<string>  $labels
      */

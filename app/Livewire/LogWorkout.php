@@ -10,6 +10,7 @@ use App\Models\Workout;
 use App\Models\WorkoutBlock;
 use App\Models\WorkoutExercise;
 use App\Models\WorkoutSet;
+use App\Support\SetMeasure;
 use Carbon\Carbon;
 use Database\Seeders\ExerciseSeeder;
 use Illuminate\Database\Eloquent\Collection;
@@ -83,6 +84,8 @@ class LogWorkout extends Component
      * @var array<int, string>
      */
     public array $pendingNames = [];
+
+    public string $customMeasure = SetMeasure::Reps;
 
     public function mount(): void
     {
@@ -234,6 +237,7 @@ class LogWorkout extends Component
         }
 
         $this->targetBlockId = $blockId;
+        $this->customMeasure = SetMeasure::Reps;
         $this->showExercisePicker = true;
     }
 
@@ -424,6 +428,7 @@ class LogWorkout extends Component
         $exercise = Exercise::query()->create([
             'user_id' => auth()->id(),
             'name' => $name,
+            'measure' => SetMeasure::normalize($this->customMeasure),
             'approved_at' => null,
         ]);
 
@@ -510,6 +515,26 @@ class LogWorkout extends Component
         $this->resetErrorBag('pendingNames.'.$exercise->id);
     }
 
+    public function setExerciseMeasure(int $exerciseId, string $measure): void
+    {
+        if ($this->changesAreLocked() || ! array_key_exists($measure, SetMeasure::Labels)) {
+            return;
+        }
+
+        $exercise = Exercise::query()
+            ->whereKey($exerciseId)
+            ->where('user_id', auth()->id())
+            ->whereNull('approved_at')
+            ->first();
+
+        if (! $exercise instanceof Exercise) {
+            return;
+        }
+
+        $exercise->update(['measure' => $measure]);
+        $this->hydrateFromWorkout();
+    }
+
     public function complete(): void
     {
         $this->persistType();
@@ -591,22 +616,32 @@ class LogWorkout extends Component
 
         $set = $this->ownedSet($setId);
 
+        $measure = SetMeasure::normalize($set->workoutExercise->exercise->measure);
         $this->setWeights[$setId] = trim((string) ($this->setWeights[$setId] ?? ''));
         $this->setReps[$setId] = trim((string) ($this->setReps[$setId] ?? ''));
+        $this->resetErrorBag("setReps.{$setId}");
+        $parsed = SetMeasure::parse($measure, $this->setReps[$setId]);
 
-        $this->validate([
-            "setWeights.{$setId}" => ['nullable', 'numeric', 'min:0', 'max:2000'],
-            "setReps.{$setId}" => ['nullable', 'integer', 'min:0', 'max:500'],
-        ]);
+        if ($parsed['error'] !== null) {
+            $this->addError("setReps.{$setId}", $parsed['error']);
+
+            return;
+        }
+
+        if (SetMeasure::tracksWeight($measure)) {
+            $this->validate([
+                "setWeights.{$setId}" => ['nullable', 'numeric', 'min:0', 'max:2000'],
+            ]);
+        }
 
         $set->update([
-            'weight' => $this->setWeights[$setId] === '' ? null : $this->setWeights[$setId],
-            'reps' => $this->setReps[$setId] === '' ? null : $this->setReps[$setId],
+            'weight' => SetMeasure::tracksWeight($measure) && $this->setWeights[$setId] !== '' ? $this->setWeights[$setId] : null,
+            'reps' => $parsed['value'],
         ]);
 
         $set->refresh();
         $this->setWeights[$setId] = $this->displayWeight($set->weight);
-        $this->setReps[$setId] = $set->reps === null ? '' : (string) $set->reps;
+        $this->setReps[$setId] = SetMeasure::present($measure, $set->reps);
     }
 
     public function updatedSetActualWeights(mixed $value, string $key): void
@@ -629,22 +664,32 @@ class LogWorkout extends Component
 
         $set = $this->ownedSet($setId);
 
+        $measure = SetMeasure::normalize($set->workoutExercise->exercise->measure);
         $this->setActualWeights[$setId] = trim((string) ($this->setActualWeights[$setId] ?? ''));
         $this->setActualReps[$setId] = trim((string) ($this->setActualReps[$setId] ?? ''));
+        $this->resetErrorBag("setActualReps.{$setId}");
+        $parsed = SetMeasure::parse($measure, $this->setActualReps[$setId]);
 
-        $this->validate([
-            "setActualWeights.{$setId}" => ['nullable', 'numeric', 'min:0', 'max:2000'],
-            "setActualReps.{$setId}" => ['nullable', 'integer', 'min:0', 'max:500'],
-        ]);
+        if ($parsed['error'] !== null) {
+            $this->addError("setActualReps.{$setId}", $parsed['error']);
+
+            return;
+        }
+
+        if (SetMeasure::tracksWeight($measure)) {
+            $this->validate([
+                "setActualWeights.{$setId}" => ['nullable', 'numeric', 'min:0', 'max:2000'],
+            ]);
+        }
 
         $set->update([
-            'actual_weight' => $this->setActualWeights[$setId] === '' ? null : $this->setActualWeights[$setId],
-            'actual_reps' => $this->setActualReps[$setId] === '' ? null : $this->setActualReps[$setId],
+            'actual_weight' => SetMeasure::tracksWeight($measure) && $this->setActualWeights[$setId] !== '' ? $this->setActualWeights[$setId] : null,
+            'actual_reps' => $parsed['value'],
         ]);
 
         $set->refresh();
         $this->setActualWeights[$setId] = $this->displayWeight($set->actual_weight);
-        $this->setActualReps[$setId] = $set->actual_reps === null ? '' : (string) $set->actual_reps;
+        $this->setActualReps[$setId] = SetMeasure::present($measure, $set->actual_reps);
     }
 
     public function copyShare(): void
@@ -812,11 +857,13 @@ class LogWorkout extends Component
                 $this->pendingNames[$exercise->exercise->id] = $exercise->exercise->name;
             }
 
+            $measure = $exercise->exercise?->measure;
+
             foreach ($exercise->sets as $set) {
                 $this->setWeights[$set->id] = $this->displayWeight($set->weight);
-                $this->setReps[$set->id] = $set->reps === null ? '' : (string) $set->reps;
+                $this->setReps[$set->id] = SetMeasure::present($measure, $set->reps);
                 $this->setActualWeights[$set->id] = $this->displayWeight($set->actual_weight);
-                $this->setActualReps[$set->id] = $set->actual_reps === null ? '' : (string) $set->actual_reps;
+                $this->setActualReps[$set->id] = SetMeasure::present($measure, $set->actual_reps);
             }
         }
 
