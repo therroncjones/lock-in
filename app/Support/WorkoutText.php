@@ -5,7 +5,7 @@ namespace App\Support;
 use App\Models\Workout;
 use App\Models\WorkoutExercise;
 use App\Models\WorkoutSet;
-use App\Support\SetMeasure;
+use Illuminate\Support\Collection;
 
 class WorkoutText
 {
@@ -18,10 +18,12 @@ class WorkoutText
         }
 
         $type = trim((string) $workout->type);
-        $pieces = [($type !== '' ? $type : 'Workout').' · '.$workout->performed_on->format('D, M j')];
+        $sections = [];
 
-        foreach ($workout->exercises->whereNull('workout_block_id')->sortBy('position') as $entry) {
-            $pieces[] = self::exercise($entry);
+        $loose = $workout->exercises->whereNull('workout_block_id')->sortBy('position')->values();
+
+        if ($loose->isNotEmpty()) {
+            $sections[] = self::section(null, $loose);
         }
 
         foreach ($workout->blocks as $block) {
@@ -34,78 +36,230 @@ class WorkoutText
                 continue;
             }
 
-            foreach ($entries as $index => $entry) {
-                $text = self::exercise($entry);
-                $pieces[] = $index === 0 ? $block->name."\n".$text : $text;
-            }
+            $sections[] = self::section($block->name, $entries);
         }
 
-        return implode("\n\n", $pieces);
+        return ($type !== '' ? $type : 'Workout')."\n".implode("\n\n…\n\n", $sections);
     }
 
-    private static function exercise(WorkoutExercise $entry): string
+    /**
+     * @param  Collection<int, WorkoutExercise>  $entries
+     */
+    private static function section(?string $name, Collection $entries): string
     {
-        $lines = [$entry->exercise->name];
+        $lines = [];
 
-        foreach ($entry->sets as $set) {
-            $line = self::setLine($set, $entry->exercise->measure);
+        if ($name !== null && $name !== '') {
+            $lines[] = $name;
+        }
 
-            if ($line !== null) {
-                $lines[] = $line;
-            }
+        foreach ($entries as $entry) {
+            array_push($lines, ...self::exerciseLines($entry));
         }
 
         return implode("\n", $lines);
     }
 
-    private static function setLine(WorkoutSet $set, ?string $measure): ?string
+    /**
+     * @return list<string>
+     */
+    private static function exerciseLines(WorkoutExercise $entry): array
+    {
+        $measure = SetMeasure::normalize($entry->exercise->measure);
+        $sets = $entry->sets
+            ->filter(fn (WorkoutSet $set): bool => self::hasData($set, $measure))
+            ->values();
+        $lines = [$entry->exercise->name];
+
+        if ($sets->isEmpty()) {
+            return $lines;
+        }
+
+        if ($sets->every(fn (WorkoutSet $set): bool => self::did($set, $measure) === null)) {
+            $collapsed = self::collapsed($sets, $measure);
+
+            if ($collapsed !== null) {
+                array_push($lines, ...$collapsed);
+
+                return $lines;
+            }
+        }
+
+        foreach ($sets as $set) {
+            $line = self::setLine($set, $measure);
+            $did = self::did($set, $measure);
+
+            if ($line === '') {
+                if ($did !== null) {
+                    $lines[] = $did;
+                }
+
+                continue;
+            }
+
+            $lines[] = $did === null ? $line : $line.', '.$did;
+        }
+
+        return $lines;
+    }
+
+    /**
+     * @param  Collection<int, WorkoutSet>  $sets
+     * @return list<string>|null
+     */
+    private static function collapsed(Collection $sets, string $measure): ?array
+    {
+        $count = $sets->count();
+        $amounts = $sets->map(fn (WorkoutSet $set): ?int => self::amount($set, $measure))->all();
+        $weights = $sets->map(fn (WorkoutSet $set): ?string => self::planWeight($set, $measure))->all();
+        $sameAmount = count(array_unique($amounts, SORT_REGULAR)) === 1;
+        $sameWeight = count(array_unique($weights, SORT_REGULAR)) === 1;
+
+        if ($sameAmount && $sameWeight) {
+            return [self::scheme($count, $amounts[0], $weights[0], $measure)];
+        }
+
+        if ($sameAmount && self::everyWeight($weights)) {
+            return [
+                self::scheme($count, $amounts[0], null, $measure),
+                implode('/', $weights),
+            ];
+        }
+
+        if ($sameWeight && ! in_array(null, $amounts, true)) {
+            $pieces = array_map(fn (int $amount): string => self::amountLabel($amount, $measure), $amounts);
+
+            return [self::scheme($count, null, $weights[0], $measure, implode('/', $pieces))];
+        }
+
+        return null;
+    }
+
+    private static function scheme(int $count, ?int $amount, ?string $weight, string $measure, ?string $amounts = null): string
+    {
+        $body = $amounts ?? ($amount === null ? '' : self::amountLabel($amount, $measure));
+        $line = $count.'x'.$body;
+
+        if ($weight !== null) {
+            $line .= ' @ '.$weight;
+        }
+
+        return $line;
+    }
+
+    private static function setLine(WorkoutSet $set, string $measure): string
+    {
+        $amount = self::amount($set, $measure);
+        $weight = self::planWeight($set, $measure);
+
+        if (! SetMeasure::tracksWeight($measure)) {
+            return $amount === null ? '' : self::amountLabel($amount, $measure);
+        }
+
+        if ($weight !== null && $amount !== null) {
+            return $weight.'x'.$amount;
+        }
+
+        if ($amount !== null) {
+            return $amount.' '.($amount === 1 ? 'rep' : 'reps');
+        }
+
+        return $weight.' lbs';
+    }
+
+    private static function did(WorkoutSet $set, string $measure): ?string
     {
         if (! SetMeasure::tracksWeight($measure)) {
-            $plan = SetMeasure::describe($measure, $set->reps);
-            $actual = SetMeasure::describe($measure, $set->actual_reps);
-        } else {
-            $plan = self::pair($set->weight, $set->reps);
-            $actual = self::pair($set->actual_weight, $set->actual_reps);
+            if ($set->actual_reps === null || (int) $set->actual_reps === self::amount($set, $measure)) {
+                return null;
+            }
+
+            return 'did '.self::amountLabel((int) $set->actual_reps, $measure);
         }
 
-        if ($plan === null && $actual === null) {
+        $hasActualWeight = self::filled($set->actual_weight);
+        $hasActualReps = $set->actual_reps !== null;
+
+        if (! $hasActualWeight && ! $hasActualReps) {
             return null;
         }
 
-        if ($plan === null) {
-            return 'did '.$actual;
+        $weightSame = ! $hasActualWeight || self::number($set->actual_weight) === self::planWeight($set, $measure);
+        $repsSame = ! $hasActualReps || (int) $set->actual_reps === self::amount($set, $measure);
+
+        if ($weightSame && $repsSame) {
+            return null;
         }
 
-        if ($actual === null) {
-            return $plan;
+        if (! $weightSame && $repsSame) {
+            return 'did '.self::number($set->actual_weight);
         }
 
-        return $plan.' · did '.$actual;
+        $reps = $hasActualReps ? (int) $set->actual_reps : self::amount($set, $measure);
+
+        if ($weightSame) {
+            return 'did '.$reps.' '.($reps === 1 ? 'rep' : 'reps');
+        }
+
+        $weight = $hasActualWeight ? self::number($set->actual_weight) : self::planWeight($set, $measure);
+
+        return $weight === null ? 'did '.$reps.' reps' : 'did '.$weight.'x'.$reps;
     }
 
-    private static function pair(mixed $weight, mixed $reps): ?string
+    private static function hasData(WorkoutSet $set, string $measure): bool
     {
-        $hasWeight = $weight !== null && $weight !== '';
-        $hasReps = $reps !== null && $reps !== '';
+        if (SetMeasure::tracksWeight($measure)) {
+            return self::filled($set->weight) || $set->reps !== null || self::filled($set->actual_weight) || $set->actual_reps !== null;
+        }
 
-        if (! $hasWeight && ! $hasReps) {
+        return $set->reps !== null || $set->actual_reps !== null;
+    }
+
+    private static function amount(WorkoutSet $set, string $measure): ?int
+    {
+        if (SetMeasure::tracksWeight($measure)) {
+            return $set->reps === null ? null : (int) $set->reps;
+        }
+
+        return $set->reps === null ? null : (int) $set->reps;
+    }
+
+    private static function planWeight(WorkoutSet $set, string $measure): ?string
+    {
+        if (! SetMeasure::tracksWeight($measure) || ! self::filled($set->weight)) {
             return null;
         }
 
-        if ($hasWeight && $hasReps) {
-            return self::weight($weight).' × '.(int) $reps;
-        }
-
-        if ($hasWeight) {
-            return self::weight($weight).' lbs';
-        }
-
-        $count = (int) $reps;
-
-        return $count.' '.($count === 1 ? 'rep' : 'reps');
+        return self::number($set->weight);
     }
 
-    private static function weight(mixed $weight): string
+    private static function amountLabel(int $amount, string $measure): string
+    {
+        if ($measure === SetMeasure::Time) {
+            return $amount < 60 ? $amount.'s' : SetMeasure::formatDuration($amount);
+        }
+
+        if ($measure === SetMeasure::Calories) {
+            return $amount.' cal';
+        }
+
+        return (string) $amount;
+    }
+
+    /**
+     * @param  list<?string>  $weights
+     */
+    private static function everyWeight(array $weights): bool
+    {
+        return $weights !== [] && ! in_array(null, $weights, true);
+    }
+
+    private static function filled(mixed $weight): bool
+    {
+        return $weight !== null && $weight !== '';
+    }
+
+    private static function number(mixed $weight): string
     {
         $number = (float) $weight;
 

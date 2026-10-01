@@ -37,7 +37,7 @@
         @endphp
         <div class="flex items-center justify-end gap-3 border-b border-neutral-200/80 bg-white px-4 py-3 md:hidden">
             @if (auth()->user()->isAdministrator())
-                <a href="{{ url('/admin') }}" class="text-sm font-medium text-neutral-500 hover:text-black">Users</a>
+                <a href="{{ url('/admin') }}" class="text-sm font-medium text-neutral-500 hover:text-black">Dashboard</a>
             @endif
             <form method="POST" action="{{ route('logout') }}">
                 @csrf
@@ -59,7 +59,7 @@
                     <p class="truncate text-sm font-semibold">{{ auth()->user()->name }}</p>
                     <div class="mt-2 flex items-center gap-3 text-sm">
                         @if (auth()->user()->isAdministrator())
-                            <a href="{{ url('/admin') }}" class="text-neutral-500 hover:text-black">Users</a>
+                            <a href="{{ url('/admin') }}" class="text-neutral-500 hover:text-black">Dashboard</a>
                         @endif
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf

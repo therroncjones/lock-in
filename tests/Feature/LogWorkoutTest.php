@@ -626,17 +626,17 @@ class LogWorkoutTest extends TestCase
         ]);
 
         $expected = <<<'TEXT'
-Strength - Upper Body · Wed, Sep 30
-
+Strength - Upper Body
 Bench Press
-185 × 5
-205 × 3 · did 200 × 3
-
+185x5
+205x3, did 200
 Battle Ropes
+
+…
 
 Main
 Barbell Row
-135 × 8
+1x8 @ 135
 TEXT;
 
         $this->assertSame($expected, WorkoutText::from($workout));
@@ -652,6 +652,76 @@ TEXT;
         $this->assertStringContainsString('navigator.clipboard.writeText', $script);
         $this->assertStringContainsString('Battle Ropes', $script);
         $this->assertStringContainsString('Barbell Row', $script);
+    }
+
+    public function test_copied_text_groups_repeated_sets_and_uses_the_exercise_measure(): void
+    {
+        $user = User::factory()->guest()->create();
+        $pushUp = Exercise::query()->where('name', 'Push-Up')->firstOrFail();
+        $row = Exercise::query()->where('name', 'Pendlay Row')->first();
+        $plank = Exercise::query()->where('name', 'Plank')->firstOrFail();
+
+        if ($row === null) {
+            $row = Exercise::query()->create([
+                'name' => 'Pendlay Row',
+                'measure' => 'reps',
+                'approved_at' => now(),
+            ]);
+        }
+
+        $workout = Workout::factory()->for($user)->create([
+            'performed_on' => '2026-09-30',
+            'type' => 'Workout',
+        ]);
+        $push = $workout->exercises()->create([
+            'exercise_id' => $pushUp->id,
+            'position' => 1,
+        ]);
+
+        foreach ([1, 2, 3] as $position) {
+            $push->sets()->create([
+                'position' => $position,
+                'reps' => 10,
+            ]);
+        }
+
+        $pendlay = $workout->exercises()->create([
+            'exercise_id' => $row->id,
+            'position' => 2,
+        ]);
+
+        foreach ([35, 45, 60, 60, 60] as $index => $weight) {
+            $pendlay->sets()->create([
+                'position' => $index + 1,
+                'weight' => $weight,
+                'reps' => 8,
+            ]);
+        }
+
+        $hold = $workout->exercises()->create([
+            'exercise_id' => $plank->id,
+            'position' => 3,
+        ]);
+
+        foreach ([1, 2, 3, 4] as $position) {
+            $hold->sets()->create([
+                'position' => $position,
+                'reps' => 15,
+            ]);
+        }
+
+        $expected = <<<'TEXT'
+Workout
+Push-Up
+3x10
+Pendlay Row
+5x8
+35/45/60/60/60
+Plank
+4x15s
+TEXT;
+
+        $this->assertSame($expected, WorkoutText::from($workout));
     }
 
     public function test_time_and_calorie_exercises_use_their_own_inputs(): void

@@ -11,7 +11,6 @@
         @vite(['resources/css/app.css', 'resources/js/app.js'])
         <style>
             @media (width < 40rem) {
-                .public-sign-in,
                 .public-signup-long {
                     display: none;
                 }

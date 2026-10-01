@@ -312,7 +312,9 @@ class HomeTest extends TestCase
             ->assertOk()
             ->assertSee('1 exercise needs approval')
             ->assertSee('Battle Ropes')
-            ->assertSee(url('/admin/exercises'), false);
+            ->assertSee(url('/admin/exercises'), false)
+            ->assertSee('Dashboard')
+            ->assertDontSee('>Users<', false);
     }
 
     public function test_administrators_do_not_see_an_approval_prompt_when_nothing_is_pending(): void

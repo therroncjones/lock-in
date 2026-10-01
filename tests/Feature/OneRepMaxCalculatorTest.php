@@ -20,6 +20,8 @@ class OneRepMaxCalculatorTest extends TestCase
             ->assertSee('One rep max weight', false)
             ->assertSee('One Rep Max Calculator')
             ->assertSee('More than a calculator.')
+            ->assertSee('Sign in')
+            ->assertSee(route('filament.admin.auth.login'), false)
             ->assertSee('Sign Up')
             ->assertSee('Log your workouts')
             ->assertSee('See real progress')
