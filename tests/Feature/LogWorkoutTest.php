@@ -470,13 +470,17 @@ class LogWorkoutTest extends TestCase
 
         $this->actingAs($user);
 
-        Livewire::test(LogWorkout::class)
+        $log = Livewire::test(LogWorkout::class)
             ->set('type', 'Strength - Full Body')
             ->call('startSession')
             ->set('type', 'Mobility')
             ->assertSee('Strength')
-            ->assertSee('Mobility')
-            ->call('deleteSession');
+            ->assertSee('Mobility');
+
+        Livewire::test(LogWorkout::class)
+            ->assertSet('type', 'Strength - Full Body');
+
+        $log->call('deleteSession');
 
         $remaining = Workout::query()->get();
 

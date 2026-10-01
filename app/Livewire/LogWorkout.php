@@ -833,7 +833,7 @@ class LogWorkout extends Component
             }
         }
 
-        return $workouts->last();
+        return $workouts->first();
     }
 
     private function hydrateFromWorkout(): void
