@@ -100,17 +100,12 @@ class WorkoutText
 
         foreach ($sets as $set) {
             $line = self::setLine($set, $measure);
-            $did = self::did($set, $measure);
 
             if ($line === '') {
-                if ($did !== null) {
-                    $lines[] = $did;
-                }
-
                 continue;
             }
 
-            $lines[] = $did === null ? $line : $line.', '.$did;
+            $lines[] = $line;
         }
 
         return $lines;

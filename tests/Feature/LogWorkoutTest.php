@@ -635,7 +635,7 @@ Strength - Upper Body
 
 Bench Press
 185x5
-205x3, did 200
+205x3
 
 Battle Ropes
 
