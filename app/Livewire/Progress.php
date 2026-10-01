@@ -51,7 +51,7 @@ class Progress extends Component
     ];
 
     #[Url]
-    public string $type = 'Strength - Full Body';
+    public string $type = 'Strength - Upper Body';
 
     #[Url]
     public string $range = 'month';
@@ -133,7 +133,7 @@ class Progress extends Component
     private function normalizeFilters(): void
     {
         if (! in_array($this->type, self::Types, true)) {
-            $this->type = 'Strength - Full Body';
+            $this->type = self::Types[0];
         }
 
         if (! array_key_exists($this->range, self::Ranges)) {

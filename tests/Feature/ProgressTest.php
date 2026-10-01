@@ -33,6 +33,7 @@ class ProgressTest extends TestCase
         $this->actingAs($user);
 
         Livewire::test(Progress::class)
+            ->assertSet('type', 'Strength - Upper Body')
             ->assertSee('Strength')
             ->assertSee('Cardio')
             ->assertSee('Bodyweight')
@@ -183,7 +184,12 @@ class ProgressTest extends TestCase
         $this->travelTo('2026-09-29 12:00:00');
 
         Livewire::test(Progress::class)
-            ->assertSet('type', 'Strength - Full Body')
+            ->assertSet('type', 'Strength - Upper Body')
+            ->assertDontSee('Includes upper body, lower body, and full body sessions.')
+            ->assertSee('200 × 5')
+            ->assertDontSee('225 × 3')
+            ->assertDontSee('315 × 3')
+            ->call('filterType', 'Strength - Full Body')
             ->assertSee('Includes upper body, lower body, and full body sessions.')
             ->assertSee('200 × 5')
             ->assertSee('225 × 3')
@@ -340,7 +346,7 @@ class ProgressTest extends TestCase
         }
     }
 
-    private function logExercise(User $user, Exercise $exercise, string $date, string $type = 'Strength - Full Body'): void
+    private function logExercise(User $user, Exercise $exercise, string $date, string $type = 'Strength - Upper Body'): void
     {
         $workout = Workout::factory()->create([
             'user_id' => $user->id,
@@ -355,7 +361,7 @@ class ProgressTest extends TestCase
         ]);
     }
 
-    private function logSet(User $user, Exercise $exercise, string $date, ?string $weight, int $reps, string $type = 'Strength - Full Body'): WorkoutExercise
+    private function logSet(User $user, Exercise $exercise, string $date, ?string $weight, int $reps, string $type = 'Strength - Upper Body'): WorkoutExercise
     {
         $workout = Workout::factory()->create([
             'user_id' => $user->id,
