@@ -26,6 +26,11 @@ class UserManagementTest extends TestCase
         Livewire::test(Dashboard::class)
             ->assertSuccessful();
 
+        $this->get('/admin')
+            ->assertSuccessful()
+            ->assertSee(route('home'), false)
+            ->assertSee('Back to app');
+
         Livewire::test(ListUsers::class)
             ->assertForbidden();
     }

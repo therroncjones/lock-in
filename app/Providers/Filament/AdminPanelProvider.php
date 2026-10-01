@@ -4,6 +4,7 @@ namespace App\Providers\Filament;
 
 use App\Filament\Auth\Register;
 use Filament\Http\Middleware\Authenticate;
+use Filament\Navigation\NavigationItem;
 use Filament\View\PanelsRenderHook;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -50,6 +51,12 @@ class AdminPanelProvider extends PanelProvider
             ->navigationGroups([
                 'Training',
                 'Settings',
+            ])
+            ->navigationItems([
+                NavigationItem::make('Back to app')
+                    ->url(fn (): string => route('home'))
+                    ->icon('heroicon-o-arrow-left')
+                    ->sort(-3),
             ])
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
