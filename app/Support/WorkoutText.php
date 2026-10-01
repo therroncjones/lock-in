@@ -80,20 +80,10 @@ class WorkoutText
             return $lines;
         }
 
-        if ($sets->every(fn (WorkoutSet $set): bool => self::did($set, $measure) === null)) {
-            $collapsed = self::collapsed($sets, $measure);
+        $collapsed = self::collapsed($sets, $measure);
 
-            if ($collapsed !== null) {
-                array_push($lines, ...$collapsed);
-
-                return $lines;
-            }
-        }
-
-        $withoutLoad = self::collapsedWithoutLoad($sets, $measure);
-
-        if ($withoutLoad !== null) {
-            array_push($lines, ...$withoutLoad);
+        if ($collapsed !== null) {
+            array_push($lines, ...$collapsed);
 
             return $lines;
         }
@@ -123,15 +113,12 @@ class WorkoutText
         $sameAmount = count(array_unique($amounts, SORT_REGULAR)) === 1;
         $sameWeight = count(array_unique($weights, SORT_REGULAR)) === 1;
 
-        if ($sameAmount && $sameWeight) {
-            return [self::scheme($count, $amounts[0], $weights[0], $measure)];
+        if ($sameAmount && $amounts[0] !== null && $count > 1) {
+            return [self::scheme($count, $amounts[0], null, $measure)];
         }
 
-        if ($sameAmount && self::everyWeight($weights)) {
-            return [
-                self::scheme($count, $amounts[0], null, $measure),
-                implode('/', $weights),
-            ];
+        if ($sameAmount && $sameWeight) {
+            return [self::scheme($count, $amounts[0], $weights[0], $measure)];
         }
 
         if ($sameWeight && ! in_array(null, $amounts, true)) {
@@ -141,41 +128,6 @@ class WorkoutText
         }
 
         return null;
-    }
-
-    /**
-     * Same planned reps, with only the load changing, collapse to "3x8".
-     *
-     * @param  Collection<int, WorkoutSet>  $sets
-     * @return list<string>|null
-     */
-    private static function collapsedWithoutLoad(Collection $sets, string $measure): ?array
-    {
-        if (! SetMeasure::tracksWeight($measure)) {
-            return null;
-        }
-
-        $amounts = $sets->map(fn (WorkoutSet $set): ?int => self::amount($set, $measure))->all();
-
-        if (in_array(null, $amounts, true) || count(array_unique($amounts, SORT_REGULAR)) !== 1) {
-            return null;
-        }
-
-        $loadOnly = $sets->contains(fn (WorkoutSet $set): bool => self::did($set, $measure) !== null)
-            && $sets->every(fn (WorkoutSet $set): bool => self::loadOnly($set, $measure));
-
-        if (! $loadOnly) {
-            return null;
-        }
-
-        return [self::scheme($sets->count(), $amounts[0], null, $measure)];
-    }
-
-    private static function loadOnly(WorkoutSet $set, string $measure): bool
-    {
-        $did = self::did($set, $measure);
-
-        return $did === null || (str_starts_with($did, 'did ') && ! str_contains($did, 'x') && ! str_contains($did, 'rep'));
     }
 
     private static function scheme(int $count, ?int $amount, ?string $weight, string $measure, ?string $amounts = null): string
@@ -208,45 +160,6 @@ class WorkoutText
         }
 
         return $weight.' lbs';
-    }
-
-    private static function did(WorkoutSet $set, string $measure): ?string
-    {
-        if (! SetMeasure::tracksWeight($measure)) {
-            if ($set->actual_reps === null || (int) $set->actual_reps === self::amount($set, $measure)) {
-                return null;
-            }
-
-            return 'did '.self::amountLabel((int) $set->actual_reps, $measure);
-        }
-
-        $hasActualWeight = self::filled($set->actual_weight);
-        $hasActualReps = $set->actual_reps !== null;
-
-        if (! $hasActualWeight && ! $hasActualReps) {
-            return null;
-        }
-
-        $weightSame = ! $hasActualWeight || self::number($set->actual_weight) === self::planWeight($set, $measure);
-        $repsSame = ! $hasActualReps || (int) $set->actual_reps === self::amount($set, $measure);
-
-        if ($weightSame && $repsSame) {
-            return null;
-        }
-
-        if (! $weightSame && $repsSame) {
-            return 'did '.self::number($set->actual_weight);
-        }
-
-        $reps = $hasActualReps ? (int) $set->actual_reps : self::amount($set, $measure);
-
-        if ($weightSame) {
-            return 'did '.$reps.' '.($reps === 1 ? 'rep' : 'reps');
-        }
-
-        $weight = $hasActualWeight ? self::number($set->actual_weight) : self::planWeight($set, $measure);
-
-        return $weight === null ? 'did '.$reps.' reps' : 'did '.$weight.'x'.$reps;
     }
 
     private static function hasData(WorkoutSet $set, string $measure): bool
@@ -291,14 +204,6 @@ class WorkoutText
         }
 
         return (string) $amount;
-    }
-
-    /**
-     * @param  list<?string>  $weights
-     */
-    private static function everyWeight(array $weights): bool
-    {
-        return $weights !== [] && ! in_array(null, $weights, true);
     }
 
     private static function filled(mixed $weight): bool

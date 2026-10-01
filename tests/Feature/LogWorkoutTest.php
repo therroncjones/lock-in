@@ -724,7 +724,6 @@ Push-Up
 
 Pendlay Row
 5x8
-35/45/60/60/60
 
 Plank
 4x15s
