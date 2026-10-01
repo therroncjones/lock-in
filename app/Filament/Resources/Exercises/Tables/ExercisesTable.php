@@ -43,6 +43,7 @@ class ExercisesTable
                     ->color(fn (string $state): string => $state === 'Pending' ? 'warning' : 'success'),
             ])
             ->defaultSort('name')
+            ->persistFiltersInSession()
             ->filters([
                 SelectFilter::make('status')
                     ->options([

@@ -133,4 +133,17 @@ class ExerciseManagementTest extends TestCase
         $this->assertNotNull($exercise->approved_at);
         $this->assertNull(ExerciseResource::getNavigationBadge());
     }
+
+    public function test_the_exercise_list_remembers_its_filters(): void
+    {
+        $admin = User::factory()->administrator()->create();
+
+        $this->actingAs($admin);
+
+        Livewire::test(ListExercises::class)
+            ->filterTable('group', 'Upper Body');
+
+        Livewire::test(ListExercises::class)
+            ->assertSet('tableFilters.group.value', 'Upper Body');
+    }
 }
