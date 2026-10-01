@@ -5,16 +5,19 @@
     $plannedQuantityLabel = match ($measure) {
         'time' => 'Planned Time',
         'calories' => 'Planned Calories',
+        'meters' => 'Planned Meters',
         default => 'Planned Reps',
     };
     $actualQuantityLabel = match ($measure) {
         'time' => 'Actual Time',
         'calories' => 'Actual Calories',
+        'meters' => 'Actual Meters',
         default => 'Actual Reps',
     };
     $quantityPlaceholder = match ($measure) {
         'time' => '0:00',
         'calories' => 'Calories',
+        'meters' => 'Meters',
         default => 'Reps',
     };
 @endphp

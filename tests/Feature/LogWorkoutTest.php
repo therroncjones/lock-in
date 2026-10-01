@@ -724,6 +724,30 @@ TEXT;
         $this->assertSame($expected, WorkoutText::from($workout));
     }
 
+    public function test_a_meter_exercise_is_logged_as_distance(): void
+    {
+        $user = User::factory()->guest()->create();
+
+        $this->actingAs($user);
+
+        $component = Livewire::test(LogWorkout::class)
+            ->call('openExercisePicker')
+            ->set('exerciseQuery', 'SkiErg')
+            ->set('customMeasure', 'meters')
+            ->call('addCustomExercise')
+            ->assertSee('Planned Meters')
+            ->assertSee('Actual Meters');
+
+        $exercise = Exercise::query()->where('name', 'SkiErg')->firstOrFail();
+        $set = WorkoutSet::query()->firstOrFail();
+
+        $component->set("setReps.{$set->id}", '100')->assertHasNoErrors();
+
+        $this->assertSame('meters', $exercise->measure);
+        $this->assertSame(100, $set->fresh()->reps);
+        $this->assertStringContainsString("SkiErg\n1x100 m", WorkoutText::from($set->workoutExercise->workout));
+    }
+
     public function test_time_and_calorie_exercises_use_their_own_inputs(): void
     {
         $user = User::factory()->guest()->create();

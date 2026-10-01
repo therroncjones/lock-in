@@ -36,7 +36,7 @@ class ExerciseForm
                     ->default(SetMeasure::Reps)
                     ->required()
                     ->native(false)
-                    ->helperText('Reps keep weight and reps. Time is a duration. Calories is a calorie count.'),
+                    ->helperText('Reps keep weight and reps. Time is a duration. Calories is a calorie count. Meters is a distance.'),
                 CheckboxList::make('session_types')
                     ->label('Sessions')
                     ->options(array_combine(Workout::SuggestedTypes, Workout::SuggestedTypes))

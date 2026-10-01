@@ -243,6 +243,10 @@ class WorkoutText
             return $amount.' cal';
         }
 
+        if ($measure === SetMeasure::Meters) {
+            return $amount.' m';
+        }
+
         return (string) $amount;
     }
 

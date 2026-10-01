@@ -227,22 +227,26 @@ class Progress extends Component
             'bestCaption' => match ($measure) {
                 SetMeasure::Time => 'Longest set logged in this range.',
                 SetMeasure::Calories => 'Highest calorie set logged in this range.',
+                SetMeasure::Meters => 'Farthest set logged in this range.',
                 default => 'Heaviest set logged in this range.',
             },
             'volumeCaption' => match ($measure) {
                 SetMeasure::Time => 'Time added up.',
                 SetMeasure::Calories => 'Calories added up.',
+                SetMeasure::Meters => 'Meters added up.',
                 default => 'Weight times reps, added up.',
             },
             'volumeText' => $this->volumeText($sets, $measure),
             'setHeading' => match ($measure) {
                 SetMeasure::Time => 'Time',
                 SetMeasure::Calories => 'Calories',
+                SetMeasure::Meters => 'Meters',
                 default => 'Weight × Reps',
             },
             'chartHeading' => match ($measure) {
                 SetMeasure::Time => 'Longest Set',
                 SetMeasure::Calories => 'Highest Calories',
+                SetMeasure::Meters => 'Farthest Set',
                 default => 'Heaviest Set',
             },
             'sets' => $visible->map(fn (WorkoutSet $set): array => [
@@ -1149,6 +1153,10 @@ class Progress extends Component
             $count = (int) round($this->score($sets, $measure));
 
             return number_format($count).' '.($count === 1 ? 'calorie' : 'calories');
+        }
+
+        if ($measure === SetMeasure::Meters) {
+            return number_format((int) round($this->score($sets, $measure))).' m';
         }
 
         return $this->displayVolume($sets).' lbs';

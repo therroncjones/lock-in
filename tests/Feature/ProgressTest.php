@@ -365,6 +365,30 @@ class ProgressTest extends TestCase
             ->assertSee('Highest Calories');
     }
 
+    public function test_meter_progress_adds_up_distance(): void
+    {
+        $user = User::factory()->guest()->create();
+        $ski = Exercise::query()->create([
+            'user_id' => $user->id,
+            'name' => 'SkiErg',
+            'measure' => 'meters',
+            'approved_at' => now(),
+        ]);
+
+        $this->logSet($user, $ski, '2026-09-20', null, 100);
+        $this->logSet($user, $ski, '2026-09-21', null, 250);
+
+        $this->actingAs($user);
+        $this->travelTo('2026-09-29 12:00:00');
+
+        Livewire::test(Progress::class)
+            ->assertSee('Farthest set logged in this range.')
+            ->assertSee('Meters added up.')
+            ->assertSee('250 m')
+            ->assertSee('350 m')
+            ->assertSee('Farthest Set');
+    }
+
     /**
      * @param  list<string>  $labels
      */

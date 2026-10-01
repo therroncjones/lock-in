@@ -10,6 +10,8 @@ class SetMeasure
 
     public const Calories = 'calories';
 
+    public const Meters = 'meters';
+
     /**
      * @var array<string, string>
      */
@@ -17,6 +19,7 @@ class SetMeasure
         self::Reps => 'Reps',
         self::Time => 'Time',
         self::Calories => 'Calories',
+        self::Meters => 'Meters',
     ];
 
     /**
@@ -103,14 +106,26 @@ class SetMeasure
         }
 
         if (! preg_match('/^\d+$/', $input)) {
-            return ['value' => null, 'error' => $measure === self::Calories ? 'Enter calories as a whole number.' : 'Enter reps as a whole number.'];
+            return ['value' => null, 'error' => match ($measure) {
+                self::Calories => 'Enter calories as a whole number.',
+                self::Meters => 'Enter meters as a whole number.',
+                default => 'Enter reps as a whole number.',
+            }];
         }
 
         $amount = (int) $input;
-        $max = $measure === self::Calories ? 20000 : 500;
+        $max = match ($measure) {
+            self::Calories => 20000,
+            self::Meters => 65535,
+            default => 500,
+        };
 
         if ($amount > $max) {
-            return ['value' => null, 'error' => $measure === self::Calories ? 'Enter 20,000 calories or fewer.' : 'Enter 500 reps or fewer.'];
+            return ['value' => null, 'error' => match ($measure) {
+                self::Calories => 'Enter 20,000 calories or fewer.',
+                self::Meters => 'Enter 65,535 meters or fewer.',
+                default => 'Enter 500 reps or fewer.',
+            }];
         }
 
         return ['value' => $amount, 'error' => null];
@@ -134,6 +149,10 @@ class SetMeasure
             $count = (int) $amount;
 
             return $count.' '.($count === 1 ? 'calorie' : 'calories');
+        }
+
+        if ($measure === self::Meters) {
+            return ((int) $amount).' m';
         }
 
         $count = $hasAmount ? (int) $amount : null;
@@ -160,6 +179,7 @@ class SetMeasure
 
         $unit = match ($measure) {
             self::Calories => abs($delta) === 1 ? 'calorie' : 'calories',
+            self::Meters => 'm',
             default => abs($delta) === 1 ? 'rep' : 'reps',
         };
 
