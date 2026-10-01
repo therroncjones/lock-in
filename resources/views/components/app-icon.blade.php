@@ -28,6 +28,7 @@
         'trash' => 'fa-trash',
         'close' => 'fa-xmark',
         'info' => 'fa-circle-info',
+        'alert' => 'fa-circle-exclamation',
         'bookmark' => 'fa-bookmark',
         'minus' => 'fa-minus',
     ];

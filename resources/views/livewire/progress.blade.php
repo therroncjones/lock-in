@@ -5,6 +5,48 @@
                 border-radius: 9999px;
             }
         }
+
+        .plan-card-even,
+        .plan-card-ahead {
+            background: #f0fdf4;
+        }
+
+        .plan-card-under {
+            background: #fef2f2;
+        }
+
+        .plan-icon-even,
+        .plan-icon-ahead {
+            background: #22c55e;
+        }
+
+        .plan-icon-under {
+            background: #ef4444;
+        }
+
+        .plan-badge-even,
+        .plan-badge-ahead {
+            background: #dcfce7;
+            color: #15803d;
+        }
+
+        .plan-badge-under {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+
+        .plan-fill-even,
+        .plan-fill-ahead {
+            background: #22c55e;
+        }
+
+        .plan-fill-under {
+            background: #ef4444;
+        }
+
+        .plan-value {
+            width: 8.5rem;
+        }
     </style>
     <header class="flex items-start justify-between gap-4">
         <div>
@@ -197,35 +239,85 @@
                         </svg>
                     </article>
                 @endif
-                <article class="flex items-center gap-3 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-neutral-200/70">
-                    <div class="min-w-0 flex-1">
-                        <div class="flex items-center gap-2">
-                            <span class="grid size-8 place-items-center rounded-full bg-[#e8f0ff] text-[#2f6bff]">
-                                <x-app-icon name="progress" class="size-4" />
-                            </span>
-                            <p class="text-xs text-neutral-500">Planned vs Actual</p>
-                        </div>
-                        <p class="mt-1 text-[11px] leading-snug text-neutral-400">Each set compared with what was planned.</p>
-                        @if ($summary['actuals'] !== [])
-                            <div class="overflow-y-auto" style="max-height: 13rem">
-                                @foreach ($summary['actuals'] as $actual)
-                                    <p @class([
-                                        'mt-2 text-lg font-bold',
-                                        'text-emerald-500' => $actual['direction'] > 0,
-                                        'text-red-600' => $actual['direction'] < 0,
-                                    ])>{{ $actual['status'] }}</p>
-                                    <p class="mt-1 text-xs text-neutral-500">Plan {{ $actual['planned'] }}</p>
-                                    <p class="mt-1 text-xs text-neutral-500">{{ $actual['actual'] }}</p>
-                                    <p class="mt-1 text-xs font-semibold text-neutral-600">{{ $actual['delta'] }}</p>
-                                @endforeach
-                            </div>
-                        @else
-                            <p class="mt-2 text-2xl font-bold">—</p>
-                            <p class="mt-1 text-xs text-neutral-500">No actuals logged</p>
-                        @endif
-                    </div>
-                </article>
             </section>
+
+            <article class="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-neutral-200/70">
+                <div class="flex items-center gap-3">
+                    <span class="grid size-8 shrink-0 place-items-center rounded-full bg-[#e8f0ff] text-[#2f6bff]">
+                        <x-app-icon name="progress" class="size-4" />
+                    </span>
+                    <div>
+                        <h2 class="font-semibold">Planned vs Actual</h2>
+                        <p class="text-xs text-neutral-500">Each set compared with what was planned.</p>
+                    </div>
+                </div>
+                @if ($summary['actuals'] !== [])
+                    <div class="mt-4 flex flex-col gap-3 overflow-y-auto" style="max-height: 36rem">
+                        @foreach ($summary['actuals'] as $actual)
+                            <div @class(['plan-card rounded-2xl p-4', 'plan-card-'.$actual['tone']])>
+                                <div class="flex items-start justify-between gap-3">
+                                    <div class="flex min-w-0 items-center gap-3">
+                                        <span @class(['plan-icon grid size-8 shrink-0 place-items-center rounded-full text-white', 'plan-icon-'.$actual['tone']])>
+                                            @if ($actual['tone'] === 'under')
+                                                <x-app-icon name="alert" class="size-4" />
+                                            @else
+                                                <x-app-icon name="check" class="size-4" />
+                                            @endif
+                                        </span>
+                                        <div class="min-w-0">
+                                            <p class="font-bold leading-tight">{{ $actual['status'] }}</p>
+                                            <p class="mt-1 text-xs text-neutral-500">Plan {{ $actual['planned'] }}</p>
+                                        </div>
+                                    </div>
+                                    <span @class(['plan-badge shrink-0 rounded-full px-2 py-1 text-[11px] font-semibold tracking-wide', 'plan-badge-'.$actual['tone']])>{{ $actual['badge'] }}</span>
+                                </div>
+                                <div class="mt-4 flex items-center gap-4">
+                                    <div class="min-w-0 flex-1">
+                                        <p class="text-xs text-neutral-500">Planned</p>
+                                        <div class="mt-1 flex items-center gap-3">
+                                            <p class="plan-value shrink-0 whitespace-nowrap text-sm font-bold">{{ $actual['plannedBar'] }}</p>
+                                            <div class="h-2 min-w-0 flex-1 rounded-full bg-neutral-200"></div>
+                                        </div>
+                                        <p class="mt-3 text-xs text-neutral-500">Actual</p>
+                                        <div class="mt-1 flex items-center gap-3">
+                                            <p class="plan-value shrink-0 whitespace-nowrap text-sm font-bold">{{ $actual['actualBar'] }}</p>
+                                            <div class="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-neutral-100">
+                                                <div @class(['plan-fill h-2 rounded-full', 'plan-fill-'.$actual['tone']]) style="width: {{ $actual['bar'] }}%"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="shrink-0 border-l border-neutral-200 pl-4 text-right" style="width: 6.75rem">
+                                        <p class="text-xs text-neutral-500">Difference</p>
+                                        @if ($actual['weightDelta'] !== null)
+                                            <p @class([
+                                                'mt-1 text-sm font-bold',
+                                                'text-emerald-600' => $actual['weightDirection'] > 0,
+                                                'text-red-600' => $actual['weightDirection'] < 0,
+                                            ])>{{ $actual['weightDelta'] }}</p>
+                                        @endif
+                                        @if ($actual['amountDelta'] !== null)
+                                            <p @class([
+                                                'text-xs',
+                                                'mt-1 font-bold' => $actual['weightDelta'] === null,
+                                                'font-semibold' => $actual['weightDelta'] !== null && $actual['amountDirection'] !== 0,
+                                                'text-emerald-600' => $actual['amountDirection'] > 0,
+                                                'text-red-600' => $actual['amountDirection'] < 0,
+                                                'text-neutral-400' => $actual['amountDirection'] === 0 && $actual['weightDelta'] !== null,
+                                            ])>{{ $actual['amountDelta'] }}</p>
+                                        @endif
+                                        @if ($actual['weightDelta'] === null && $actual['amountDelta'] === null)
+                                            <p class="mt-1 text-sm font-bold">{{ $actual['delta'] }}</p>
+                                        @endif
+                                    </div>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                @else
+                    <p class="mt-4 text-2xl font-bold">—</p>
+                    <p class="mt-1 text-xs text-neutral-500">No actuals logged</p>
+                @endif
+            </article>
 
             <section class="grid grid-cols-1 gap-4 xl:grid-cols-2">
                 @if ($summary['chart'])

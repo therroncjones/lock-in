@@ -617,39 +617,93 @@ class Progress extends Component
     }
 
     /**
-     * @return array{actual: string, planned: string, delta: string, direction: int, status: string, date: string}
+     * @return array{actual: string, planned: string, plannedBar: string, actualBar: string, weightDelta: ?string, amountDelta: ?string, weightDirection: int, amountDirection: int, bar: int, delta: string, direction: int, status: string, badge: string, tone: string, date: string}
      */
     private function compareActual(mixed $actualWeight, mixed $actualReps, ?WorkoutSet $planned, string $date, string $measure = SetMeasure::Reps): array
     {
         $notes = [];
         $direction = 0;
+        $weightDelta = null;
+        $amountDelta = null;
+        $weightDirection = 0;
+        $amountDirection = 0;
         $measure = SetMeasure::normalize($measure);
+        $tracksWeight = SetMeasure::tracksWeight($measure);
 
-        if (SetMeasure::tracksWeight($measure) && $actualWeight !== null && $actualWeight !== '' && $planned instanceof WorkoutSet && $planned->weight !== null && $planned->weight !== '') {
+        if ($tracksWeight && $actualWeight !== null && $actualWeight !== '' && $planned instanceof WorkoutSet && $planned->weight !== null && $planned->weight !== '') {
             $delta = (float) $actualWeight - (float) $planned->weight;
-            $notes[] = $this->signedAmount($delta, 'lbs');
-            $direction = $delta <=> 0;
+            $weightDelta = $this->signedAmount($delta, 'lbs');
+            $weightDirection = $delta <=> 0;
+            $notes[] = $weightDelta;
+            $direction = $weightDirection;
         }
 
         if ($actualReps !== null && $planned instanceof WorkoutSet && $planned->reps !== null) {
             $delta = (int) $actualReps - (int) $planned->reps;
-            $notes[] = SetMeasure::tracksWeight($measure)
+            $amountDelta = $tracksWeight
                 ? $this->signedAmount($delta, abs($delta) === 1 ? 'rep' : 'reps')
                 : SetMeasure::signedDelta($measure, $delta);
+            $amountDirection = $delta <=> 0;
+            $notes[] = $amountDelta;
 
             if ($direction === 0) {
-                $direction = $delta <=> 0;
+                $direction = $amountDirection;
             }
         }
+
+        $bar = 100;
+
+        if ($tracksWeight && $planned instanceof WorkoutSet && $planned->weight !== null && $planned->weight !== '' && (float) $planned->weight > 0 && $actualWeight !== null && $actualWeight !== '') {
+            $bar = (int) round(min(100, max(0, ((float) $actualWeight / (float) $planned->weight) * 100)));
+        } elseif ($planned instanceof WorkoutSet && $planned->reps !== null && (int) $planned->reps > 0 && $actualReps !== null) {
+            $bar = (int) round(min(100, max(0, ((int) $actualReps / (int) $planned->reps) * 100)));
+        }
+
+        $tone = $direction > 0 ? 'ahead' : ($direction < 0 ? 'under' : 'even');
 
         return [
             'actual' => $this->actualLabel($actualWeight, $actualReps, $measure),
             'planned' => $planned instanceof WorkoutSet ? ($this->plannedLabel($planned, $measure) ?? 'No planned set') : 'No planned set',
+            'plannedBar' => $planned instanceof WorkoutSet ? $this->comparisonBarLabel($planned->weight, $planned->reps, $measure) : 'No planned set',
+            'actualBar' => $this->comparisonBarLabel($actualWeight, $actualReps, $measure),
+            'weightDelta' => $weightDelta,
+            'amountDelta' => $amountDelta,
+            'weightDirection' => $weightDirection,
+            'amountDirection' => $amountDirection,
+            'bar' => $bar,
             'delta' => $notes === [] ? 'Logged' : implode(', ', $notes),
             'direction' => $direction,
-            'status' => $direction > 0 ? 'Ahead' : ($direction < 0 ? 'Under plan' : 'On Track'),
+            'status' => $direction > 0 ? 'Ahead' : ($direction < 0 ? 'Under Plan' : 'On Track'),
+            'badge' => $direction > 0 ? 'ABOVE PLAN' : ($direction < 0 ? 'BELOW PLAN' : 'MATCHED PLAN'),
+            'tone' => $tone,
             'date' => $date,
         ];
+    }
+
+    private function comparisonBarLabel(mixed $weight, mixed $reps, string $measure): string
+    {
+        if (! SetMeasure::tracksWeight($measure)) {
+            return SetMeasure::describe($measure, $reps) ?? '—';
+        }
+
+        $hasWeight = $weight !== null && $weight !== '';
+        $hasReps = $reps !== null && $reps !== '';
+
+        if ($hasWeight && $hasReps) {
+            return $this->displayWeight($weight).' lbs × '.(int) $reps;
+        }
+
+        if ($hasWeight) {
+            return $this->displayWeight($weight).' lbs';
+        }
+
+        if ($hasReps) {
+            $count = (int) $reps;
+
+            return $count.' '.($count === 1 ? 'rep' : 'reps');
+        }
+
+        return '—';
     }
 
     /**
