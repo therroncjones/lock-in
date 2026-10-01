@@ -78,8 +78,8 @@ class LogWorkoutTest extends TestCase
             ->call('addExercise', $exercise->id)
             ->assertSet('showExercisePicker', true)
             ->assertSee('Barbell Back Squat')
-            ->assertSee('PLANNED WEIGHT (LBS)')
-            ->assertSee('PLANNED REPS')
+            ->assertSee('Planned Weight (lbs)')
+            ->assertSee('Planned Reps')
             ->assertSee('ACTUAL WEIGHT')
             ->assertSee('ACTUAL REPS')
             ->assertSee('Add Set');

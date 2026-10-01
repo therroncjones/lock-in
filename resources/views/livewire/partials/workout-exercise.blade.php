@@ -35,14 +35,7 @@
     </div>
 
     @if ($isOpen)
-        <div class="mt-4 grid grid-cols-[1.75rem_minmax(0,1fr)_minmax(0,1fr)_2rem_2rem] items-end gap-2 text-[11px] font-semibold leading-tight tracking-wide text-neutral-400">
-            <span>SET</span>
-            <span class="text-center">PLANNED WEIGHT (LBS)</span>
-            <span class="text-center">PLANNED REPS</span>
-            <span class="col-span-2 text-right">STATUS</span>
-        </div>
-
-        <div class="mt-2 flex flex-col">
+        <div class="mt-4 flex flex-col">
             @foreach ($entry->sets as $set)
                 <div
                     wire:key="set-{{ $set->id }}"
@@ -52,34 +45,46 @@
                     ])
                     @unless ($loop->first) style="margin-top: 0.75rem; padding-top: 0.75rem" @endunless
                 >
-                <div class="grid grid-cols-[1.75rem_minmax(0,1fr)_minmax(0,1fr)_2rem_2rem] items-center gap-2">
-                    <span class="text-sm font-semibold text-neutral-500">{{ $set->position }}</span>
-                    <input
-                        type="text"
-                        inputmode="decimal"
-                        wire:model.blur="setWeights.{{ $set->id }}"
-                        placeholder="Weight"
-                        aria-label="Weight for set {{ $set->position }}"
-                        @readonly($isComplete)
-                        @class([
-                            'w-full rounded-xl border border-neutral-200 px-2 py-2 text-center text-sm outline-none focus:border-[#2f6bff]',
-                            'bg-neutral-50' => $isComplete,
-                            'bg-white' => ! $isComplete,
-                        ])
-                    >
-                    <input
-                        type="text"
-                        inputmode="numeric"
-                        wire:model.blur="setReps.{{ $set->id }}"
-                        placeholder="Reps"
-                        aria-label="Reps for set {{ $set->position }}"
-                        @readonly($isComplete)
-                        @class([
-                            'w-full rounded-xl border border-neutral-200 px-2 py-2 text-center text-sm outline-none focus:border-[#2f6bff]',
-                            'bg-neutral-50' => $isComplete,
-                            'bg-white' => ! $isComplete,
-                        ])
-                    >
+                <div class="grid grid-cols-[1.75rem_minmax(0,1fr)_minmax(0,1fr)_2rem_2rem] items-end gap-2">
+                    <span class="mb-2 text-sm font-semibold text-neutral-500">{{ $set->position }}</span>
+                    <label class="flex min-w-0 flex-col gap-1">
+                        <span class="whitespace-nowrap text-center text-[11px] font-semibold text-neutral-400">Planned Weight (lbs)</span>
+                        <input
+                            type="text"
+                            inputmode="decimal"
+                            wire:model.blur="setWeights.{{ $set->id }}"
+                            placeholder="Weight"
+                            aria-label="Weight for set {{ $set->position }}"
+                            @readonly($isComplete)
+                            @class([
+                                'w-full rounded-xl border border-neutral-200 px-2 py-2 text-center text-sm outline-none focus:border-[#2f6bff]',
+                                'bg-neutral-50' => $isComplete,
+                                'bg-white' => ! $isComplete,
+                            ])
+                        >
+                        @error('setWeights.'.$set->id)
+                            <p class="text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </label>
+                    <label class="flex min-w-0 flex-col gap-1">
+                        <span class="whitespace-nowrap text-center text-[11px] font-semibold text-neutral-400">Planned Reps</span>
+                        <input
+                            type="text"
+                            inputmode="numeric"
+                            wire:model.blur="setReps.{{ $set->id }}"
+                            placeholder="Reps"
+                            aria-label="Reps for set {{ $set->position }}"
+                            @readonly($isComplete)
+                            @class([
+                                'w-full rounded-xl border border-neutral-200 px-2 py-2 text-center text-sm outline-none focus:border-[#2f6bff]',
+                                'bg-neutral-50' => $isComplete,
+                                'bg-white' => ! $isComplete,
+                            ])
+                        >
+                        @error('setReps.'.$set->id)
+                            <p class="text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </label>
                     @if ($isComplete)
                         <span></span>
                     @endif
@@ -90,7 +95,7 @@
                         aria-label="{{ $set->completed ? 'Mark set '.$set->position.' incomplete' : 'Mark set '.$set->position.' complete' }}"
                         aria-pressed="{{ $set->completed ? 'true' : 'false' }}"
                         @class([
-                            'grid size-7 place-items-center rounded-full',
+                            'mb-2 grid size-7 place-items-center rounded-full',
                             'ml-auto' => $isComplete,
                             'bg-emerald-500 text-white' => $set->completed,
                             'bg-white text-neutral-300 ring-1 ring-neutral-300' => ! $set->completed,
@@ -101,21 +106,15 @@
                         @endif
                     </button>
                     @unless ($isComplete)
-                        <button type="button" wire:click="removeSet({{ $set->id }})" class="grid size-7 place-items-center text-neutral-400 hover:text-neutral-700" aria-label="Remove set {{ $set->position }}">
+                        <button type="button" wire:click="removeSet({{ $set->id }})" class="mb-2 grid size-7 place-items-center text-neutral-400 hover:text-neutral-700" aria-label="Remove set {{ $set->position }}">
                             <x-app-icon name="trash" class="size-4" />
                         </button>
                     @endunless
-                    @error('setWeights.'.$set->id)
-                        <p class="col-span-5 text-sm text-red-600">{{ $message }}</p>
-                    @enderror
-                    @error('setReps.'.$set->id)
-                        <p class="col-span-5 text-sm text-red-600">{{ $message }}</p>
-                    @enderror
                 </div>
                 <div class="grid grid-cols-[1.75rem_minmax(0,1fr)_minmax(0,1fr)_2rem_2rem] gap-2">
                     <span></span>
                     <label class="flex min-w-0 flex-col gap-1">
-                        <span class="text-center text-[11px] font-semibold tracking-wide text-neutral-400">ACTUAL WEIGHT</span>
+                        <span class="text-center text-[11px] font-semibold tracking-wide text-neutral-400">Actual Weight</span>
                         <input
                             type="text"
                             inputmode="decimal"
@@ -134,7 +133,7 @@
                         @enderror
                     </label>
                     <label class="flex min-w-0 flex-col gap-1">
-                        <span class="text-center text-[11px] font-semibold tracking-wide text-neutral-400">ACTUAL REPS</span>
+                        <span class="text-center text-[11px] font-semibold tracking-wide text-neutral-400">Actual Reps</span>
                         <input
                             type="text"
                             inputmode="numeric"
