@@ -35,16 +35,24 @@
     </div>
 
     @if ($isOpen)
-        <div class="mt-4 grid grid-cols-[1.75rem_minmax(0,1fr)_minmax(0,1fr)_2rem_2rem] items-center gap-2 text-[11px] font-semibold tracking-wide text-neutral-400">
+        <div class="mt-4 grid grid-cols-[1.75rem_minmax(0,1fr)_minmax(0,1fr)_2rem_2rem] items-end gap-2 text-[11px] font-semibold leading-tight tracking-wide text-neutral-400">
             <span>SET</span>
-            <span>WEIGHT (LBS)</span>
-            <span>REPS</span>
+            <span class="text-center">PLANNED WEIGHT (LBS)</span>
+            <span class="text-center">PLANNED REPS</span>
             <span class="col-span-2 text-right">STATUS</span>
         </div>
 
-        <div class="mt-2 flex flex-col gap-2">
+        <div class="mt-2 flex flex-col">
             @foreach ($entry->sets as $set)
-                <div wire:key="set-{{ $set->id }}" class="grid grid-cols-[1.75rem_minmax(0,1fr)_minmax(0,1fr)_2rem_2rem] items-center gap-2">
+                <div
+                    wire:key="set-{{ $set->id }}"
+                    @class([
+                        'flex flex-col gap-2',
+                        'border-t border-neutral-100' => ! $loop->first,
+                    ])
+                    @unless ($loop->first) style="margin-top: 0.75rem; padding-top: 0.75rem" @endunless
+                >
+                <div class="grid grid-cols-[1.75rem_minmax(0,1fr)_minmax(0,1fr)_2rem_2rem] items-center gap-2">
                     <span class="text-sm font-semibold text-neutral-500">{{ $set->position }}</span>
                     <input
                         type="text"
@@ -103,46 +111,48 @@
                     @error('setReps.'.$set->id)
                         <p class="col-span-5 text-sm text-red-600">{{ $message }}</p>
                     @enderror
-                    <div class="col-span-5 grid grid-cols-2 gap-2">
-                        <label class="flex min-w-0 flex-col gap-1">
-                            <span class="text-[11px] font-semibold tracking-wide text-neutral-400">ACTUAL WEIGHT</span>
-                            <input
-                                type="text"
-                                inputmode="decimal"
-                                wire:model.blur="setActualWeights.{{ $set->id }}"
-                                placeholder="Weight"
-                                aria-label="Actual weight for set {{ $set->position }}"
-                                @readonly($isComplete)
-                                @class([
-                                    'w-full rounded-xl border border-neutral-200 px-2 py-2 text-center text-sm outline-none focus:border-[#2f6bff]',
-                                    'bg-neutral-50' => $isComplete,
-                                    'bg-white' => ! $isComplete,
-                                ])
-                            >
-                        </label>
-                        <label class="flex min-w-0 flex-col gap-1">
-                            <span class="text-[11px] font-semibold tracking-wide text-neutral-400">ACTUAL REPS</span>
-                            <input
-                                type="text"
-                                inputmode="numeric"
-                                wire:model.blur="setActualReps.{{ $set->id }}"
-                                placeholder="Reps"
-                                aria-label="Actual reps for set {{ $set->position }}"
-                                @readonly($isComplete)
-                                @class([
-                                    'w-full rounded-xl border border-neutral-200 px-2 py-2 text-center text-sm outline-none focus:border-[#2f6bff]',
-                                    'bg-neutral-50' => $isComplete,
-                                    'bg-white' => ! $isComplete,
-                                ])
-                            >
-                        </label>
-                    </div>
-                    @error('setActualWeights.'.$set->id)
-                        <p class="col-span-5 text-sm text-red-600">{{ $message }}</p>
-                    @enderror
-                    @error('setActualReps.'.$set->id)
-                        <p class="col-span-5 text-sm text-red-600">{{ $message }}</p>
-                    @enderror
+                </div>
+                <div class="grid grid-cols-[1.75rem_minmax(0,1fr)_minmax(0,1fr)_2rem_2rem] gap-2">
+                    <span></span>
+                    <label class="flex min-w-0 flex-col gap-1">
+                        <span class="text-center text-[11px] font-semibold tracking-wide text-neutral-400">ACTUAL WEIGHT</span>
+                        <input
+                            type="text"
+                            inputmode="decimal"
+                            wire:model.blur="setActualWeights.{{ $set->id }}"
+                            placeholder="Weight"
+                            aria-label="Actual weight for set {{ $set->position }}"
+                            @readonly($isComplete)
+                            @class([
+                                'w-full rounded-xl border border-neutral-200 px-2 py-2 text-center text-sm outline-none focus:border-[#2f6bff]',
+                                'bg-neutral-50' => $isComplete,
+                                'bg-white' => ! $isComplete,
+                            ])
+                        >
+                        @error('setActualWeights.'.$set->id)
+                            <p class="text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </label>
+                    <label class="flex min-w-0 flex-col gap-1">
+                        <span class="text-center text-[11px] font-semibold tracking-wide text-neutral-400">ACTUAL REPS</span>
+                        <input
+                            type="text"
+                            inputmode="numeric"
+                            wire:model.blur="setActualReps.{{ $set->id }}"
+                            placeholder="Reps"
+                            aria-label="Actual reps for set {{ $set->position }}"
+                            @readonly($isComplete)
+                            @class([
+                                'w-full rounded-xl border border-neutral-200 px-2 py-2 text-center text-sm outline-none focus:border-[#2f6bff]',
+                                'bg-neutral-50' => $isComplete,
+                                'bg-white' => ! $isComplete,
+                            ])
+                        >
+                        @error('setActualReps.'.$set->id)
+                            <p class="text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </label>
+                </div>
                 </div>
             @endforeach
         </div>
