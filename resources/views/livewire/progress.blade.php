@@ -203,20 +203,22 @@
                             <span class="grid size-8 place-items-center rounded-full bg-[#e8f0ff] text-[#2f6bff]">
                                 <x-app-icon name="progress" class="size-4" />
                             </span>
-                            <p class="text-xs text-neutral-500">Actual vs plan</p>
+                            <p class="text-xs text-neutral-500">Planned vs Actual</p>
                         </div>
                         <p class="mt-1 text-[11px] leading-snug text-neutral-400">Each set compared with what was planned.</p>
                         @if ($summary['actuals'] !== [])
-                            @foreach ($summary['actuals'] as $actual)
-                                <p @class([
-                                    'mt-2 text-lg font-bold',
-                                    'text-emerald-500' => $actual['direction'] > 0,
-                                    'text-red-600' => $actual['direction'] < 0,
-                                ])>{{ $actual['status'] }}</p>
-                                <p class="mt-1 text-xs text-neutral-500">{{ $actual['actual'] }}</p>
-                                <p class="mt-1 text-xs text-neutral-500">Plan {{ $actual['planned'] }}</p>
-                                <p class="mt-1 text-xs font-semibold text-neutral-600">{{ $actual['delta'] }}</p>
-                            @endforeach
+                            <div class="overflow-y-auto" style="max-height: 13rem">
+                                @foreach ($summary['actuals'] as $actual)
+                                    <p @class([
+                                        'mt-2 text-lg font-bold',
+                                        'text-emerald-500' => $actual['direction'] > 0,
+                                        'text-red-600' => $actual['direction'] < 0,
+                                    ])>{{ $actual['status'] }}</p>
+                                    <p class="mt-1 text-xs text-neutral-500">Plan {{ $actual['planned'] }}</p>
+                                    <p class="mt-1 text-xs text-neutral-500">{{ $actual['actual'] }}</p>
+                                    <p class="mt-1 text-xs font-semibold text-neutral-600">{{ $actual['delta'] }}</p>
+                                @endforeach
+                            </div>
                         @else
                             <p class="mt-2 text-2xl font-bold">—</p>
                             <p class="mt-1 text-xs text-neutral-500">No actuals logged</p>

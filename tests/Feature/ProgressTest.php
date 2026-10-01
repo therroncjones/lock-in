@@ -96,6 +96,7 @@ class ProgressTest extends TestCase
             ->assertSee('Weight times reps, added up.')
             ->assertSee('Workouts that included this exercise.')
             ->assertSee('Best set compared with your max that day.')
+            ->assertSee('Planned vs Actual')
             ->assertSee('Each set compared with what was planned.')
             ->assertSee('205 × 3')
             ->assertSee('Sep 10, 2026')
