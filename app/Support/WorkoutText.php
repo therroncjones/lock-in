@@ -17,6 +17,7 @@ class WorkoutText
             return '';
         }
 
+        $date = $workout->performed_on->format('D, M j, Y');
         $type = trim((string) $workout->type);
         $sections = [];
 
@@ -39,7 +40,9 @@ class WorkoutText
             $sections[] = self::section($block->name, $entries);
         }
 
-        return ($type !== '' ? $type : 'Workout')."\n".implode("\n\n…\n\n", $sections);
+        $heading = $date."\n".($type !== '' ? $type : 'Workout');
+
+        return $heading."\n\n".implode("\n\n", $sections);
     }
 
     /**
@@ -47,17 +50,19 @@ class WorkoutText
      */
     private static function section(?string $name, Collection $entries): string
     {
-        $lines = [];
-
-        if ($name !== null && $name !== '') {
-            $lines[] = $name;
-        }
+        $exercises = [];
 
         foreach ($entries as $entry) {
-            array_push($lines, ...self::exerciseLines($entry));
+            $exercises[] = implode("\n", self::exerciseLines($entry));
         }
 
-        return implode("\n", $lines);
+        $body = implode("\n\n", $exercises);
+
+        if ($name === null || $name === '') {
+            return $body;
+        }
+
+        return $name."\n".$body;
     }
 
     /**
@@ -83,6 +88,14 @@ class WorkoutText
 
                 return $lines;
             }
+        }
+
+        $withoutLoad = self::collapsedWithoutLoad($sets, $measure);
+
+        if ($withoutLoad !== null) {
+            array_push($lines, ...$withoutLoad);
+
+            return $lines;
         }
 
         foreach ($sets as $set) {
@@ -133,6 +146,41 @@ class WorkoutText
         }
 
         return null;
+    }
+
+    /**
+     * Same planned reps, with only the load changing, collapse to "3x8".
+     *
+     * @param  Collection<int, WorkoutSet>  $sets
+     * @return list<string>|null
+     */
+    private static function collapsedWithoutLoad(Collection $sets, string $measure): ?array
+    {
+        if (! SetMeasure::tracksWeight($measure)) {
+            return null;
+        }
+
+        $amounts = $sets->map(fn (WorkoutSet $set): ?int => self::amount($set, $measure))->all();
+
+        if (in_array(null, $amounts, true) || count(array_unique($amounts, SORT_REGULAR)) !== 1) {
+            return null;
+        }
+
+        $loadOnly = $sets->contains(fn (WorkoutSet $set): bool => self::did($set, $measure) !== null)
+            && $sets->every(fn (WorkoutSet $set): bool => self::loadOnly($set, $measure));
+
+        if (! $loadOnly) {
+            return null;
+        }
+
+        return [self::scheme($sets->count(), $amounts[0], null, $measure)];
+    }
+
+    private static function loadOnly(WorkoutSet $set, string $measure): bool
+    {
+        $did = self::did($set, $measure);
+
+        return $did === null || (str_starts_with($did, 'did ') && ! str_contains($did, 'x') && ! str_contains($did, 'rep'));
     }
 
     private static function scheme(int $count, ?int $amount, ?string $weight, string $measure, ?string $amounts = null): string

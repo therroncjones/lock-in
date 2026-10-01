@@ -630,13 +630,14 @@ class LogWorkoutTest extends TestCase
         ]);
 
         $expected = <<<'TEXT'
+Wed, Sep 30, 2026
 Strength - Upper Body
+
 Bench Press
 185x5
 205x3, did 200
-Battle Ropes
 
-…
+Battle Ropes
 
 Main
 Barbell Row
@@ -715,14 +716,58 @@ TEXT;
         }
 
         $expected = <<<'TEXT'
+Wed, Sep 30, 2026
 Workout
+
 Push-Up
 3x10
+
 Pendlay Row
 5x8
 35/45/60/60/60
+
 Plank
 4x15s
+TEXT;
+
+        $this->assertSame($expected, WorkoutText::from($workout));
+    }
+
+    public function test_copied_text_drops_the_load_when_every_set_has_the_same_reps(): void
+    {
+        $user = User::factory()->guest()->create();
+        $bench = Exercise::query()->where('name', 'Bench Press')->firstOrFail();
+        $workout = Workout::factory()->for($user)->create([
+            'performed_on' => '2026-09-30',
+            'type' => 'Strength - Upper Body',
+        ]);
+        $entry = $workout->exercises()->create([
+            'exercise_id' => $bench->id,
+            'position' => 1,
+        ]);
+
+        $entry->sets()->create([
+            'position' => 1,
+            'weight' => 115,
+            'reps' => 8,
+        ]);
+
+        foreach ([2, 3, 4] as $position) {
+            $entry->sets()->create([
+                'position' => $position,
+                'weight' => 115,
+                'reps' => 8,
+                'actual_weight' => 95,
+                'actual_reps' => 8,
+            ]);
+        }
+
+        $expected = <<<'TEXT'
+Wed, Sep 30, 2026
+Strength - Upper Body
+
+Bench Press
+4x8
 TEXT;
 
         $this->assertSame($expected, WorkoutText::from($workout));
